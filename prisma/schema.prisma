@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["app"]
+}
+
+enum WorkspaceRole {
+  OWNER
+  DESIGNER
+  CLIENT
+
+  @@schema("app")
+}
+
+model UserProfile {
+  // Equals a verified Supabase Auth user ID after Step 2.
+  // Local seed identities are fixtures and cannot sign in.
+  id           String       @id @db.Uuid
+  displayName  String       @db.VarChar(100)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  memberships Membership[]
+
+  @@schema("app")
+}
+
+model Workspace {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @db.VarChar(100)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  memberships Membership[]
+  projects    Project[]
+
+  @@schema("app")
+}
+
+model Membership {
+  workspaceId String        @db.Uuid
+  userId      String        @db.Uuid
+  role        WorkspaceRole
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        UserProfile   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  projects    ProjectMember[]
+
+  @@id([workspaceId, userId])
+  @@index([userId, workspaceId])
+  @@schema("app")
+}
+
+model Project {
+  id          String          @id @default(uuid()) @db.Uuid
+  workspaceId String          @db.Uuid
+  name        String          @db.VarChar(150)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+  archivedAt  DateTime?       @db.Timestamptz(3)
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+
+  @@unique([id, workspaceId])
+  @@index([workspaceId, archivedAt, createdAt, id])
+  @@schema("app")
+}
+
+model ProjectMember {
+  projectId   String     @db.Uuid
+  workspaceId String     @db.Uuid
+  userId      String     @db.Uuid
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
+  project     Project    @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  membership  Membership @relation(fields: [workspaceId, userId], references: [workspaceId, userId], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([workspaceId, userId, projectId])
+  @@schema("app")
+}

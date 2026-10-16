@@ -1,0 +1,10 @@
+.next
+node_modules
+src/generated
+.local
+coverage
+pnpm-lock.yaml
+Review-Room-Roadmap.md
+Review-Room-Checklist.md
+docs/ROADMAP.md
+prisma/migrations
