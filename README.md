@@ -2,7 +2,7 @@
 
 An image review workspace for creative teams and clients. Frontend and authorized backend share one Next.js application.
 
-**Current stage:** Step 1 complete — static UI, local PostgreSQL fixtures, hosted development Supabase database and verified private storage. Projects, artwork and comments shown in the UI are sample data. Private pages are not connected to the database until authentication and authorization ship in Step 2.
+**Current stage:** Step 2 Auth implementation — email/password forms, cookie refresh, real protected workspace pages, server authorization/RLS and durable signup protection. The root page remains a sample prototype. Immediate public signup requires the Dashboard email-confirmation and signup-hook settings documented in the [runbook](docs/RUNBOOK.md).
 
 ## Local development
 
@@ -38,12 +38,12 @@ pnpm supabase:check
 
 - `src/app`: routes, layouts and global styles.
 - `src/components`: prototype screens and source-owned UI primitives.
-- `src/lib/server`: server-only database access; authorization arrives in Step 2.
+- `src/lib/server`: verified-user data access; `src/lib/data` enforces server permissions and transaction-scoped RLS.
 - `prisma`: app-schema migrations and guarded, deterministic local fixtures.
 - `supabase`: versioned access-hardening and private bucket SQL, separate from Prisma.
 - `tests`: configuration safety and real PostgreSQL integration checks.
 
-No real upload, persistent comment, sign-in or approval is implemented yet. Google Fonts has system fallbacks; sample artwork is local CSS. Font hosting must be revisited before private client content ships.
+Visit `/signup` or `/login` for real Auth and `/app` for your workspaces. No real upload, persistent comment, project creation or approval is implemented yet. Google Fonts has system fallbacks; sample artwork is local CSS. Font hosting must be revisited before private client content ships.
 
 - [Roadmap](docs/ROADMAP.md)
 - [Progress and verification](docs/PROGRESS.md)

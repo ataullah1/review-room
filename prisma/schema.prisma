@@ -19,10 +19,11 @@ enum WorkspaceRole {
 model UserProfile {
   // Equals a verified Supabase Auth user ID after Step 2.
   // Local seed identities are fixtures and cannot sign in.
-  id           String       @id @db.Uuid
-  displayName  String       @db.VarChar(100)
-  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
-  memberships Membership[]
+  id             String       @id @db.Uuid
+  displayName    String       @db.VarChar(100)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  memberships    Membership[]
+  ownedWorkspace Workspace?   @relation("WorkspaceCreator")
 
   @@schema("app")
 }
@@ -33,17 +34,19 @@ model Workspace {
   createdAt   DateTime     @default(now()) @db.Timestamptz(3)
   memberships Membership[]
   projects    Project[]
+  createdById String?      @unique @db.Uuid
+  creator     UserProfile? @relation("WorkspaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@schema("app")
 }
 
 model Membership {
-  workspaceId String        @db.Uuid
-  userId      String        @db.Uuid
+  workspaceId String          @db.Uuid
+  userId      String          @db.Uuid
   role        WorkspaceRole
-  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        UserProfile   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        UserProfile     @relation(fields: [userId], references: [id], onDelete: Restrict)
   projects    ProjectMember[]
 
   @@id([workspaceId, userId])
@@ -75,5 +78,23 @@ model ProjectMember {
 
   @@id([projectId, userId])
   @@index([workspaceId, userId, projectId])
+  @@schema("app")
+}
+
+model SignupRateBucket {
+  keyHash   String   @id @db.Char(64)
+  attempts  Int
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@schema("app")
+}
+
+model SignupPermit {
+  tokenHash String   @id @db.Char(64)
+  emailHash String   @db.Char(64)
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
   @@schema("app")
 }

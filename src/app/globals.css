@@ -1541,3 +1541,241 @@ h1 > span {
     animation: none !important;
   }
 }
+
+.auth-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+}
+.auth-intro {
+  background: #edf2e6;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.auth-intro .brand {
+  margin: 0 0 110px;
+}
+.auth-intro h1 {
+  font-size: 44px;
+  line-height: 1.25;
+  margin-top: 18px;
+  position: relative;
+  z-index: 1;
+}
+.auth-intro p {
+  color: #728368;
+  max-width: 310px;
+  line-height: 1.9;
+  margin-top: 20px;
+}
+.auth-intro small {
+  margin-top: auto;
+  padding-top: 70px;
+  color: #89977d;
+}
+.auth-flower {
+  position: absolute;
+  right: -55px;
+  bottom: 25px;
+  font-size: 280px;
+  color: #dce5d1;
+  line-height: 1;
+  transform: rotate(12deg);
+}
+.auth-card {
+  margin: 0;
+  align-self: center;
+  justify-self: center;
+  width: 100%;
+  max-width: 470px;
+  padding: 50px 32px;
+}
+.auth-card h1 {
+  font-size: 29px;
+  letter-spacing: -1px;
+  line-height: 1.35;
+  margin: 12px 0;
+}
+.auth-card > p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.auth-card form {
+  display: grid;
+  gap: 19px;
+  margin-top: 30px;
+}
+.auth-card label {
+  display: grid;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.auth-card input {
+  border: 1px solid #dfe5d8;
+  border-radius: 6px;
+  padding: 13px 12px;
+  background: #fff;
+  color: var(--ink);
+  width: 100%;
+  font-size: 13px;
+}
+.auth-card .primary {
+  width: 100%;
+  padding: 14px;
+  margin-top: 5px;
+  font-size: 12px;
+  justify-content: space-between;
+}
+.auth-error {
+  background: #f9ece8;
+  color: #9d4b37;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 12px;
+  border-radius: 6px;
+}
+.auth-card .auth-switch {
+  margin-top: 25px;
+  text-align: center;
+}
+.auth-switch a {
+  color: #506b40;
+  font-weight: 600;
+  margin-left: 5px;
+}
+.auth-demo-link {
+  font-size: 11px;
+  color: #7d8c71;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 23px;
+}
+.auth-card > .auth-demo-link {
+  display: flex;
+  justify-content: center;
+}
+.private-app {
+  min-height: 100dvh;
+}
+.private-app > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 40px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+.private-app .brand {
+  margin: 0;
+}
+.private-content {
+  max-width: 1000px;
+  margin: auto;
+  padding: 45px 30px;
+}
+.private-content > .eyebrow {
+  display: block;
+  margin-top: 25px;
+}
+.private-content > p {
+  margin-top: 14px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.workspace-list {
+  display: grid;
+  gap: 15px;
+  margin-top: 32px;
+}
+.workspace-entry {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 9px;
+  padding: 23px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.workspace-entry:hover {
+  border-color: #9ab087;
+}
+.workspace-entry span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.private-empty {
+  padding: 35px;
+  border: 1px dashed #d7dfce;
+  border-radius: 9px;
+  margin-top: 30px;
+}
+.private-empty h2 {
+  font-size: 20px;
+}
+.private-empty p {
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 12px 0;
+}
+.prototype-auth-link {
+  position: fixed;
+  bottom: 16px;
+  left: 24px;
+  z-index: 5;
+  background: #556f46;
+  color: white;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 11px;
+  box-shadow: 0 3px 12px #0002;
+}
+@media (max-width: 700px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+  .auth-intro {
+    padding: 23px;
+    min-height: 0;
+  }
+  .auth-intro .brand {
+    margin: 0;
+  }
+  .auth-intro > div,
+  .auth-intro > small,
+  .auth-flower {
+    display: none;
+  }
+  .auth-card {
+    padding: 36px 25px;
+  }
+  .auth-card h1 {
+    font-size: 27px;
+  }
+  .private-app > header {
+    padding: 20px;
+  }
+  .private-content {
+    padding: 30px 20px;
+  }
+  .private-content h1 {
+    font-size: 27px;
+  }
+  .private-empty {
+    padding: 23px;
+  }
+  .workspace-entry {
+    padding: 20px;
+  }
+  .prototype-auth-link {
+    bottom: 12px;
+    left: auto;
+    right: 12px;
+  }
+}

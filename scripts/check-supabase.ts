@@ -105,6 +105,39 @@ async function checkDatabase(
       console.log(
         "anon/authenticated: application read/write grants absent; direct reads denied.",
       );
+      const requestRole = await client.query<{
+        rolbypassrls: boolean;
+        rolsuper: boolean;
+        rolcanlogin: boolean;
+      }>(
+        "SELECT rolbypassrls, rolsuper, rolcanlogin FROM pg_roles WHERE rolname = 'review_room_user'",
+      );
+      requireCheck(
+        requestRole.rows.length === 1 &&
+          requestRole.rows.every(
+            (role) => !role.rolbypassrls && !role.rolsuper && !role.rolcanlogin,
+          ),
+        "Application request role must not bypass RLS.",
+      );
+      const hook = await client.query<{
+        installed: boolean;
+        allowed: boolean;
+        browser_denied: boolean;
+      }>(`
+        SELECT to_regprocedure('app.before_user_created(jsonb)') IS NOT NULL AS installed,
+          has_function_privilege('supabase_auth_admin', 'app.before_user_created(jsonb)', 'EXECUTE') AS allowed,
+          NOT has_function_privilege('anon', 'app.before_user_created(jsonb)', 'EXECUTE')
+          AND NOT has_function_privilege('authenticated', 'app.before_user_created(jsonb)', 'EXECUTE') AS browser_denied
+      `);
+      requireCheck(
+        hook.rows[0]?.installed &&
+          hook.rows[0].allowed &&
+          hook.rows[0].browser_denied,
+        "Signup hook SQL or grants are missing.",
+      );
+      console.log(
+        "Request role: RLS enforced. Signup hook function/grants installed; Dashboard hook activation must be verified separately.",
+      );
     }
   } finally {
     await client.end().catch(() => {});
@@ -139,11 +172,11 @@ async function main() {
   );
   const auth = await authResponse.json();
   requireCheck(
-    auth.external?.email === true && auth.mailer_autoconfirm === false,
-    "Email sign-in/verification configuration differs from the roadmap.",
+    auth.external?.email === true && auth.mailer_autoconfirm === true,
+    "Immediate signup requires Confirm email OFF: Authentication > Sign In / Providers > Email > Confirm email.",
   );
   console.log(
-    "Publishable key: valid; email sign-in and verification enabled.",
+    "Publishable key: valid; email sign-in enabled and confirmation disabled.",
   );
 
   const apiResponse = await request(

@@ -82,3 +82,43 @@ Do not point the local integration harness or seed at Supabase. To return to loc
 - [Tailwind with Next.js](https://tailwindcss.com/docs/installation/framework-guides/nextjs) and [shadcn Next.js setup](https://ui.shadcn.com/docs/installation/next).
 
 Versions were inspected from the npm registry. Prisma's `latest` tag currently resolves to a prerelease; this project deliberately pins the stable 7.10.1 CLI/client/adapter together. Existing Next.js/React pins were retained. The source-owned button follows the shadcn composition pattern and uses existing product styles to preserve the UI; future generated components must be reviewed against the design tokens.
+
+## Step 2 Auth setup and manual Dashboard settings
+
+Step 1 is already complete. The additive `20261017000200_identity_permissions` migration supplies workspace bootstrap uniqueness, database request-role RLS, durable signup counters/permits and the signup hook function. It has been applied to the existing development Supabase project and the local test database; do not rerun Step 1 provisioning to use Auth.
+
+The current user explicitly requested immediate signup without email confirmation. The previous verification-required description above records Step 1's setup only.
+
+1. **Supabase Dashboard → Authentication → Sign In / Providers → Email → Confirm email → OFF → Save.** Keep the Email provider enabled. Live settings are checked before signup; a mismatch returns a temporary-unavailable error before creating an account/sending email.
+2. **Supabase Dashboard → Authentication → Hooks → Before User Created → PostgreSQL function → schema app → before_user_created → Enable/Save.** The SQL function/grants already exist. Enabling this is necessary to stop bots from bypassing the app limiter by calling Supabase's public signup API directly. It is available on the Free plan; no new paid service is required. Without Dashboard access or a Management API access token, the agent cannot enable/verify this setting from SQL installation alone.
+3. **Supabase Dashboard → Authentication → Rate Limits:** retain Supabase's built-in signup/token limits. They are additional to the application counters and are not disabled by this implementation. Server-side publishable-key requests may share the server's upstream IP quota; the application limiter separately enforces the Vercel client-IP quota.
+
+No Dashboard-setting change should be inferred from an applied database migration. `pnpm supabase:check` verifies current email confirmation mode and hook installation/grants, but reports that hook activation must be checked separately. A real provider signup without a permit must be rejected after activation.
+
+The server-only `.env` now needs a stable random SIGNUP_RATE_LIMIT_SECRET of at least 32 characters. A random value was generated locally without printing it. In Vercel, configure the same value for all instances of one environment; never add NEXT_PUBLIC_ to its name. Keep NEXT_PUBLIC_APP_URL equal to the actual application origin, and set the correct preview origin through Vercel's platform VERCEL_URL where needed.
+
+Use `/signup`, `/login`, and `/app`. The root remains the clearly labeled sample prototype and links to the real workspace. New workspaces contain no fake projects; project creation is Step 3. Logout is POST-only, verifies request origin, and clears the current session's cookies. The callback exchanges a PKCE code and only permits internal app destinations.
+
+Public signup on a non-Vercel production host fails closed because there is no trusted Vercel IP header. `pnpm dev` uses a single durable local-development quota; it does not trust locally spoofed request headers. This is not a reason to weaken the production header check for local testing.
+
+### Step 2 checks
+
+```sh
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm db:local:start
+pnpm test:integration
+pnpm build
+pnpm supabase:check
+```
+
+Local tests cover concurrent bootstrap, two independent limiter clients/restart, hourly/daily limits, permit binding/replay, server authorization and deliberately unfiltered RLS queries. Do not run the local fixture seed against hosted Supabase. The live Auth session check used an agent-created, email-confirmed test account through the Admin API without sending email, exercised login/refresh/logout, then deleted its profile/workspace/Auth account. This does not substitute for testing the immediate public signup happy path after the Dashboard settings are correct.
+
+Do not reapply supabase/001_application_access.sql as a migration: application request policies are now managed by the Step 2 migration. The original hardening SQL is idempotent and preserves policies, but routine setup should use committed additive migrations.
+
+References: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [Auth settings](https://supabase.com/docs/guides/auth/general-configuration), [built-in rate limits](https://supabase.com/docs/guides/auth/rate-limits), [Vercel request headers](https://vercel.com/docs/headers/request-headers#x-vercel-forwarded-for), [Before User Created hook](https://supabase.com/docs/guides/auth/auth-hooks/before-user-created-hook), [free hook availability](https://supabase.com/docs/guides/auth/auth-hooks).
+
+### Final live Step 2 acceptance
+
+On 17 October 2026 the user enabled the Before User Created Postgres hook. A real missing-permit signup returned HTTP 403 with no account/session; app signup with a permitted request returned HTTP 200 with immediate sign-in and profile/workspace/OWNER bootstrap. Protected access, duplicate-safe bootstrap retries and password login/logout passed with the hook active. The test account and its application records were deleted. `pnpm supabase:check` passed; its read-only hook-installation check is supplemented by this actual provider-enforcement test. No Step 2 Dashboard setting remains pending for the current development project.
