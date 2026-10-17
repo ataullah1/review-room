@@ -75,12 +75,10 @@ export default async function ProjectPage({
       {assetDirectory.assets.length ? (
         <div className="asset-grid">
           {assetDirectory.assets.map((asset) => (
-            <a
+            <Link
               className="asset-card"
               key={asset.id}
-              href={`/app/${workspaceId}/projects/${projectId}/assets/${asset.id}/file`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/app/${workspaceId}/projects/${projectId}/assets/${asset.id}?versionId=${asset.currentVersion!.id}`}
             >
               <div className="asset-thumbnail">
                 <Image
@@ -101,9 +99,9 @@ export default async function ProjectPage({
                   {(asset.currentVersion!.fileSize! / 1024 / 1024).toFixed(2)}{" "}
                   MB
                 </p>
-                <span>View image ↗</span>
+                <span>Open review →</span>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       ) : (

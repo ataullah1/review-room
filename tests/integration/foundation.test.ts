@@ -29,7 +29,7 @@ describe("PostgreSQL foundation", () => {
       SELECT tablename, rowsecurity FROM pg_tables
       WHERE schemaname = 'app' AND tablename <> '_prisma_migrations'
     `;
-    expect(tables).toHaveLength(9);
+    expect(tables).toHaveLength(10);
     expect(tables.every((table) => table.rowsecurity)).toBe(true);
     const privileges = await db.$queryRaw<Array<{ grants: number }>>`
       SELECT COUNT(*)::int AS grants FROM pg_namespace n

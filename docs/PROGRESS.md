@@ -7,13 +7,23 @@
 - [x] Step 2 Identity and permissions — application tests, live immediate signup and active provider-hook enforcement verified on 17 October 2026
 - [x] Step 3 Projects — permissions, automated checks and live browser flow verified on 17 October 2026
 - [x] Step 4 Private upload — validated private storage, permissions, cleanup and live browser acceptance verified on 17 October 2026
-- [ ] Step 5 Image comments
+- [x] Step 5 Image comments — focused permission/coordinate tests and live browser walkthrough verified on 17 October 2026
 - [ ] Step 6 Versions and approval
 - [ ] Step 7 Invitation and share links
 - [ ] Step 8 Activity
 - [ ] Step 9 Isolated demo
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
+
+## Step 5 — version-bound image comments (17 October 2026)
+
+- Added persisted numbered image pins, immutable root comments/replies and OWNER/assigned DESIGNER resolve/reopen. Assigned clients can add feedback; archived projects remain readable but reject writes. The gallery opens a review canvas for the selected READY version. Version upload/comparison/approval remain Step 6.
+- Every comment read/write verifies workspace/project/asset/version scope through the authorized server layer and non-bypass database role. RLS, column grants, root-only same-version parent constraints and immutable-field triggers independently enforce permissions and shape. Author identity/name come from verified server/database state. Durable submission IDs make retries idempotent; root numbers serialize per version and list/reply cursors bound reads.
+- Canvas uses the actual image content rectangle for normalized coordinates, Fit and bounded 100–300% zoom. Padding clicks are ignored; gestures that ever cross the drag threshold cannot create a pin. Numbered pins remain attached through resize/zoom. Add comment and keyboard position sliders provide an alternative to pointer placement; mobile uses a feedback drawer. Bodies render as plain text; failed saves retain draft text/submission IDs and thread switching preserves reply drafts.
+- Applied additive migration `20261017000700_image_comments` to the guarded local test database and development Supabase, and regenerated Prisma. No new service, secret or Dashboard setting is required.
+- Focused checks passed: 7 coordinate/validation unit tests and 6 real PostgreSQL/RLS integration tests covering canonical saves/retries, persistence, outsider/unassigned/client restrictions, immutable edits, cross-version/nested parents, forged IDs, concurrent numbering, pagination and archived projects. Lint, typecheck, changed-file formatting and production build passed. Older test suites were not rerun, following the user's request for necessary checks only.
+- Live headless Chrome acceptance passed: outsider direct POST denied 403; assigned client centre pin/reply and refresh persistence; blocked save retained the draft and retry succeeded; HTML rendered as text; owner resolve/reopen; four corner and centre pins retained coordinates through zoom; out-and-back pan created no draft; keyboard placement and 390px mobile feedback drawer without overflow. Desktop/mobile screenshots were inspected. Temporary Storage object, comments, workspaces, profiles and Auth users were removed; the existing development server was left running. The first browser attempt stopped on a test-selector quoting error, which was corrected before the successful walkthrough. No physical-device check was performed.
+- No commit, push or deployment was performed. User will make the commit; this overrides the roadmap's automatic commit instruction.
 
 ## Step 4 — private image upload (17 October 2026)
 

@@ -24,6 +24,7 @@ model UserProfile {
   createdAt      DateTime       @default(now()) @db.Timestamptz(3)
   memberships    Membership[]
   assetVersions  AssetVersion[]
+  comments       Comment[]
   ownedWorkspace Workspace?     @relation("WorkspaceCreator")
 
   @@schema("app")
@@ -153,11 +154,35 @@ model AssetVersion {
   failureReason    String?            @db.VarChar(200)
   asset            Asset              @relation("AssetVersions", fields: [assetId, projectId, workspaceId], references: [id, projectId, workspaceId], onDelete: Cascade)
   currentFor       Asset?             @relation("CurrentVersion")
+  comments         Comment[]
   creator          UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
 
   @@unique([id, assetId])
   @@unique([assetId, versionNumber])
   @@index([workspaceId, projectId, status, createdAt])
   @@index([cleanupAfter, cleanedAt])
+  @@schema("app")
+}
+
+model Comment {
+  id           String       @id @db.Uuid
+  versionId    String       @db.Uuid
+  authorId     String       @db.Uuid
+  authorName   String       @default("") @db.VarChar(100)
+  parentId     String?      @db.Uuid
+  body         String       @db.VarChar(2000)
+  xRatio       Float?       @db.DoublePrecision
+  yRatio       Float?       @db.DoublePrecision
+  threadNumber Int?
+  resolvedAt   DateTime?    @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  version      AssetVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  author       UserProfile  @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parent       Comment?     @relation("CommentReplies", fields: [parentId, versionId], references: [id, versionId], onDelete: Cascade, onUpdate: NoAction)
+  replies      Comment[]    @relation("CommentReplies")
+
+  @@unique([id, versionId])
+  @@unique([versionId, threadNumber])
+  @@index([versionId, parentId, createdAt, id])
   @@schema("app")
 }

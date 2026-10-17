@@ -3,11 +3,11 @@ import { requireUser } from "@/lib/auth/user";
 import { getDb } from "@/lib/server/db";
 import { getUploadStorage } from "@/lib/server/uploads";
 import { withUserDatabase } from "@/lib/data/context";
-import { readyAsset } from "@/lib/data/uploads";
+import { reviewVersion } from "@/lib/data/comments";
 import { uploadFailure, uploadHeaders } from "@/features/uploads/http";
 export const runtime = "nodejs";
 export async function GET(
-  _request: Request,
+  request: Request,
   context: {
     params: Promise<{
       workspaceId: string;
@@ -20,11 +20,16 @@ export async function GET(
     const { workspaceId, projectId, assetId } = await context.params,
       user = await requireUser();
     const asset = await withUserDatabase(getDb(), user.id, (tx) =>
-      readyAsset(tx, user.id, workspaceId, projectId, assetId),
+      reviewVersion(
+        tx,
+        user.id,
+        workspaceId,
+        projectId,
+        assetId,
+        new URL(request.url).searchParams.get("versionId") || undefined,
+      ),
     );
-    const signed = await getUploadStorage().signRead(
-      asset.currentVersion!.objectKey,
-    );
+    const signed = await getUploadStorage().signRead(asset.version.objectKey);
     return NextResponse.redirect(signed, {
       status: 307,
       headers: uploadHeaders,
