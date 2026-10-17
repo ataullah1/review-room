@@ -13,7 +13,11 @@ let productionClient: PrismaClient | undefined;
 // Construct only when a server feature asks for the database. Static pages and
 // production builds do not require a database or establish connections.
 export function getDb() {
-  const schema = Object.values(Prisma.ModelName).sort().join(",");
+  const schema = JSON.stringify(
+    Object.entries(Prisma)
+      .filter(([key]) => key.endsWith("ScalarFieldEnum"))
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
   if (
     globalForPrisma.reviewRoomPrisma &&
     globalForPrisma.reviewRoomPrismaSchema === schema
@@ -21,7 +25,7 @@ export function getDb() {
     return globalForPrisma.reviewRoomPrisma;
   if (globalForPrisma.reviewRoomPrisma) {
     // A regenerated client must replace the pre-migration instance held by Next
-    // dev hot reload; otherwise newly added models are undefined on transactions.
+    // dev hot reload; otherwise new models or fields remain unavailable on transactions.
     void globalForPrisma.reviewRoomPrisma.$disconnect().catch(() => undefined);
     globalForPrisma.reviewRoomPrisma = undefined;
   }

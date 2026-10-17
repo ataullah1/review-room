@@ -44,19 +44,31 @@ export async function prepareUpload(
       "Finish or cancel your existing uploads before starting another.",
       429,
     );
-  const assetId = randomUUID(),
-    id = randomUUID(),
+  const assetId = file.assetId || randomUUID();
+  if (file.assetId) {
+    const asset = await tx.asset.findFirst({
+      where: {
+        id: assetId,
+        workspaceId,
+        projectId,
+        currentVersion: { is: { status: "READY" } },
+      },
+    });
+    if (!asset) throw new UploadError("Image not found.", 404);
+  }
+  const id = randomUUID(),
     extension =
       file.mimeType === "image/jpeg" ? "jpg" : file.mimeType.split("/")[1];
-  await tx.asset.create({
-    data: {
-      id: assetId,
-      workspaceId,
-      projectId,
-      title:
-        file.name.replace(/\.[^.]+$/, "").slice(0, 150) || "Untitled image",
-    },
-  });
+  if (!file.assetId)
+    await tx.asset.create({
+      data: {
+        id: assetId,
+        workspaceId,
+        projectId,
+        title:
+          file.name.replace(/\.[^.]+$/, "").slice(0, 150) || "Untitled image",
+      },
+    });
   return tx.assetVersion.create({
     data: {
       id,
@@ -132,6 +144,18 @@ export async function publishUpload(
   await writable(tx, userId, workspaceId, projectId);
   const row = await findUpload(tx, userId, workspaceId, projectId, versionId);
   if (row.status === "READY") return row;
+  const asset = await tx.asset.findUniqueOrThrow({
+    where: { id: row.assetId },
+    include: { currentVersion: true },
+  });
+  if (
+    asset.currentVersion &&
+    asset.currentVersion.versionNumber >= row.versionNumber
+  )
+    throw new UploadError(
+      "A newer version has already been published. Refresh and upload again.",
+      409,
+    );
   const updated = await tx.assetVersion.updateMany({
     where: {
       id: row.id,

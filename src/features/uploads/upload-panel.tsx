@@ -21,9 +21,11 @@ type Stage =
 export function UploadPanel({
   workspaceId,
   projectId,
+  assetId,
 }: {
   workspaceId: string;
   projectId: string;
+  assetId?: string;
 }) {
   const [file, setFile] = useState<File | null>(null),
     [stage, setStage] = useState<Stage>("idle"),
@@ -84,6 +86,7 @@ export function UploadPanel({
     active.current = job;
     try {
       const prepared = await post("prepare", {
+        assetId,
         name: file.name,
         mimeType: file.type,
         size: file.size,
@@ -120,7 +123,7 @@ export function UploadPanel({
       });
       if (job.cancelled || active.current !== job) return;
       setStage("checking");
-      await post(
+      const saved = await post(
         "finalize",
         { versionId: prepared.versionId },
         job.controller?.signal,
@@ -129,6 +132,10 @@ export function UploadPanel({
       setStage("success");
       setFile(null);
       if (input.current) input.current.value = "";
+      if (assetId)
+        router.push(
+          `/app/${workspaceId}/projects/${projectId}/assets/${assetId}?versionId=${saved.versionId}`,
+        );
       router.refresh();
     } catch (error) {
       const cancellation = job.versionId
@@ -174,7 +181,7 @@ export function UploadPanel({
   return (
     <section
       className="upload-panel"
-      aria-label="Upload an image"
+      aria-label={assetId ? "Upload a new version" : "Upload an image"}
       aria-busy={busy}
     >
       <div className="upload-panel-heading">
@@ -182,7 +189,11 @@ export function UploadPanel({
           <ImagePlus size={22} />
         </span>
         <div>
-          <h2>Add your first impression.</h2>
+          <h2>
+            {assetId
+              ? "A fresh version, same conversation."
+              : "Add your first impression."}
+          </h2>
           <p>
             JPG, PNG or static WebP · up to 10 MB · 20 MP · 8192 px per side
           </p>
@@ -225,7 +236,9 @@ export function UploadPanel({
       {stage === "success" && (
         <p className="project-success" role="status">
           <CheckCircle2 size={16} />
-          Image uploaded. It’s ready to view below.
+          {assetId
+            ? "New version published. Client review is required again."
+            : "Image uploaded. It’s ready to view below."}
         </p>
       )}
       {stage === "cancelled" && (
@@ -254,7 +267,9 @@ export function UploadPanel({
             )}{" "}
             {stage === "failed" || stage === "cancelled"
               ? "Try upload again"
-              : "Upload image"}
+              : assetId
+                ? "Upload new version"
+                : "Upload image"}
           </Button>
         )}
       </div>

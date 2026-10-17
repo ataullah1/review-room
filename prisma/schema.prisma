@@ -19,13 +19,14 @@ enum WorkspaceRole {
 model UserProfile {
   // Equals a verified Supabase Auth user ID after Step 2.
   // Local seed identities are fixtures and cannot sign in.
-  id             String         @id @db.Uuid
-  displayName    String         @db.VarChar(100)
-  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
-  memberships    Membership[]
-  assetVersions  AssetVersion[]
-  comments       Comment[]
-  ownedWorkspace Workspace?     @relation("WorkspaceCreator")
+  id              String           @id @db.Uuid
+  displayName     String           @db.VarChar(100)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  memberships     Membership[]
+  assetVersions   AssetVersion[]
+  comments        Comment[]
+  reviewDecisions ReviewDecision[]
+  ownedWorkspace  Workspace?       @relation("WorkspaceCreator")
 
   @@schema("app")
 }
@@ -134,6 +135,7 @@ model AssetVersion {
   workspaceId      String             @db.Uuid
   versionNumber    Int                @default(1)
   status           AssetVersionStatus @default(PENDING)
+  creatorName      String             @default("") @db.VarChar(100)
   creatorId        String             @db.Uuid
   originalName     String             @db.VarChar(255)
   expectedMimeType String             @db.VarChar(30)
@@ -155,6 +157,7 @@ model AssetVersion {
   asset            Asset              @relation("AssetVersions", fields: [assetId, projectId, workspaceId], references: [id, projectId, workspaceId], onDelete: Cascade)
   currentFor       Asset?             @relation("CurrentVersion")
   comments         Comment[]
+  reviewDecisions  ReviewDecision[]
   creator          UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
 
   @@unique([id, assetId])
@@ -184,5 +187,30 @@ model Comment {
   @@unique([id, versionId])
   @@unique([versionId, threadNumber])
   @@index([versionId, parentId, createdAt, id])
+  @@schema("app")
+}
+
+enum ReviewDecisionKind {
+  APPROVED
+  CHANGES_REQUESTED
+
+  @@schema("app")
+}
+
+model ReviewDecision {
+  id             String             @id @db.Uuid
+  versionId      String             @db.Uuid
+  reviewerId     String             @db.Uuid
+  decisionNumber Int                @default(0)
+  reviewerName   String             @default("") @db.VarChar(100)
+  decision       ReviewDecisionKind
+  note           String?            @db.VarChar(2000)
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  version        AssetVersion       @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  reviewer       UserProfile        @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@unique([versionId, decisionNumber])
+  @@index([versionId, createdAt, id])
+  @@index([versionId, reviewerId, createdAt, id])
   @@schema("app")
 }

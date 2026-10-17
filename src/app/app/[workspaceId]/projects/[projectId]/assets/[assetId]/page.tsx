@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { versionPage, decisionPage } from "@/lib/data/reviews";
+import { VersionControls } from "@/features/reviews/version-controls";
+import { VersionComparison } from "@/features/reviews/comparison";
+import { DecisionPanel } from "@/features/reviews/decision-panel";
+import { UploadPanel } from "@/features/uploads/upload-panel";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/user";
 import { AccessError } from "@/lib/auth/errors";
@@ -11,10 +16,10 @@ export default async function ReviewPage({
   searchParams,
 }: {
   params: Promise<{ workspaceId: string; projectId: string; assetId: string }>;
-  searchParams: Promise<{ versionId?: string }>;
+  searchParams: Promise<{ versionId?: string; compareId?: string }>;
 }) {
   const { workspaceId, projectId, assetId } = await params,
-    { versionId } = await searchParams;
+    { versionId, compareId } = await searchParams;
   let result;
   try {
     const user = await requireUser();
@@ -29,6 +34,35 @@ export default async function ReviewPage({
       );
       return {
         ...data,
+        userId: user.id,
+        versions: await versionPage(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+        ),
+        decisions: await decisionPage(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          data.version.id,
+        ),
+        comparison:
+          compareId && compareId !== data.version.id
+            ? (
+                await reviewVersion(
+                  tx,
+                  user.id,
+                  workspaceId,
+                  projectId,
+                  assetId,
+                  compareId,
+                )
+              ).version
+            : null,
         initial: await threadPage(
           tx,
           user.id,
@@ -46,7 +80,18 @@ export default async function ReviewPage({
     }
     throw error;
   }
-  const { asset, version, project, member, initial } = result,
+  const {
+      asset,
+      version,
+      project,
+      member,
+      initial,
+      versions,
+      decisions,
+      comparison,
+
+      userId,
+    } = result,
     base = `/app/${workspaceId}/projects/${projectId}/assets/${assetId}`;
   return (
     <section className="image-review-page">
@@ -65,18 +110,82 @@ export default async function ReviewPage({
           {project.archivedAt ? " · Archived" : ""}
         </span>
       </div>
-      <ReviewWorkspace
-        key={version.id}
+      <VersionControls
+        key={`${version.id}:${asset.currentVersionId}`}
+        base={base}
+        currentId={asset.currentVersionId!}
+        selected={{
+          id: version.id,
+          versionNumber: version.versionNumber,
+          createdAt: version.createdAt.toISOString(),
+          uploader: version.creatorName,
+        }}
+        initial={versions}
+        comparison={
+          comparison
+            ? {
+                id: comparison.id,
+                versionNumber: comparison.versionNumber,
+                createdAt: comparison.createdAt.toISOString(),
+                uploader: comparison.creatorName,
+              }
+            : undefined
+        }
+      />
+      {comparison ? (
+        <VersionComparison
+          base={base}
+          left={{
+            id: version.id,
+            number: version.versionNumber,
+            width: version.width!,
+            height: version.height!,
+            uploader: version.creatorName,
+          }}
+          right={{
+            id: comparison.id,
+            number: comparison.versionNumber,
+            width: comparison.width!,
+            height: comparison.height!,
+            uploader: comparison.creatorName,
+          }}
+        />
+      ) : (
+        <ReviewWorkspace
+          key={version.id}
+          base={base}
+          versionId={version.id}
+          imageUrl={`${base}/file?versionId=${version.id}`}
+          title={asset.title}
+          width={version.width!}
+          height={version.height!}
+          initial={initial}
+          canResolve={member.role !== "CLIENT"}
+          readOnly={
+            !!project.archivedAt || asset.currentVersionId !== version.id
+          }
+        />
+      )}
+      <DecisionPanel
+        key={`${version.id}:${asset.currentVersionId}:${decisions.history[0]?.id || "none"}`}
         base={base}
         versionId={version.id}
-        imageUrl={`${base}/file?versionId=${version.id}`}
-        title={asset.title}
-        width={version.width!}
-        height={version.height!}
-        initial={initial}
-        canResolve={member.role !== "CLIENT"}
-        readOnly={!!project.archivedAt}
+        currentId={asset.currentVersionId!}
+        userId={userId}
+        canDecide={member.role === "CLIENT"}
+        archived={!!project.archivedAt}
+        initial={decisions}
       />
+      {member.role !== "CLIENT" && !project.archivedAt && (
+        <details className="new-version-panel">
+          <summary>Upload a new version</summary>
+          <UploadPanel
+            workspaceId={workspaceId}
+            projectId={projectId}
+            assetId={assetId}
+          />
+        </details>
+      )}
     </section>
   );
 }

@@ -8,12 +8,23 @@
 - [x] Step 3 Projects — permissions, automated checks and live browser flow verified on 17 October 2026
 - [x] Step 4 Private upload — validated private storage, permissions, cleanup and live browser acceptance verified on 17 October 2026
 - [x] Step 5 Image comments — focused permission/coordinate tests and live browser walkthrough verified on 17 October 2026
-- [ ] Step 6 Versions and approval
+- [x] Step 6 Versions and approval — immutable upload, independent client decisions, concurrency and live comparison flow verified on 17 October 2026
 - [ ] Step 7 Invitation and share links
 - [ ] Step 8 Activity
 - [ ] Step 9 Isolated demo
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
+
+## Step 6 — versions and individual client decisions (17 October 2026)
+
+- Added additional immutable image uploads to an existing asset through the existing private validation/finalization pipeline. Reservation numbers serialize at the asset row across uploaders, including hidden pending/failed uploads; abandoned reservations can leave number gaps. An older pending upload cannot replace a newer published version, and the database rejects backwards current-version updates. READY files/metadata remain immutable.
+- Added a bounded version switcher with version number, uploader snapshot and UTC timestamp, plus two-pane comparison with independent Fit/zoom and preserved aspect ratios. Historical pins and replies remain attached to their original version; historical comments/resolve and decisions are read only. New versions begin with no decisions or projected old pins.
+- Assigned CLIENT members alone can Approve or Request Changes; changes require a note. The UI shows each reviewer's latest decision for the selected version and paginated append-only decision history. This represents individual version decisions, not whole-project sign-off. The general Activity feed remains Step 8; decision history is retained transactionally for that integration.
+- Verified request identity, nested scope, active project, client assignment and expectedCurrentVersionId on the server under the non-bypass RLS role. Publication and decisions share the project transaction lock; database triggers also serialize direct decision/comment inserts with the asset row, reject stale versions and allocate stable decision order. UUID submission IDs make concurrent retries one canonical row; replaying an older saved decision cannot override a newer displayed response.
+- Applied additive migration `20261017000800_versions_and_decisions` to the dedicated local test database and development Supabase. It backfills uploader snapshots without broadening profile visibility. Development client caching now detects regenerated scalar-field changes as well as new models, fixing the stale-client field error found in the browser walkthrough. No new secret, dependency, paid service or Dashboard setting is needed. Hosted schema diff reports no difference.
+- Focused checks passed: 3 new validation tests plus 25 PostgreSQL tests across the changed versions/approval, comments and uploads paths (7 new review cases, 6 comment cases, 12 upload cases). Coverage includes both publication/approval orderings, direct RLS bypass attempts, reviewer separation, duplicate submissions, stale tabs, immutable history, reverse publication, archive behavior and pagination. Lint, typecheck and production build passed. No unrelated full-suite rerun.
+- Live headless Chrome acceptance passed: owner/designer decision POSTs denied 403; client saved a version-1 pin and approval; concurrent API retries kept one decision; a second client’s request-changes remained independent; native designer file upload published a portrait version 2 through private Storage; version 2 started unreviewed with zero version-1 pins; stale approval/historical comment POSTs denied 409; version-1 pins/decisions remained readable with writes disabled; current client approval saved; landscape/portrait comparison retained both aspect ratios and independent Fit; 390px mobile stacked panes without overflow. Desktop/mobile screenshots were inspected. Earlier attempts exposed the stale generated-client cache, which was corrected before the successful full walkthrough. Temporary objects, decisions, comments, workspaces, profiles and Auth accounts were removed; the existing dev server remains running. Physical-device coverage is not claimed.
+- No commit, push or deployment was performed; the user will commit. Step 7 invitation/share links has not been started.
 
 ## Step 5 — version-bound image comments (17 October 2026)
 

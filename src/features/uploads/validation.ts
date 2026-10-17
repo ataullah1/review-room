@@ -9,6 +9,7 @@ export const imageTypes = {
 } as const;
 export const uploadInput = z
   .object({
+    assetId: z.uuid().optional(),
     name: z
       .string()
       .trim()

@@ -61,6 +61,11 @@ async function writable(
   );
   if (access.project.archivedAt)
     throw new AccessError("Restore this project before adding feedback.", 409);
+  if (access.asset.currentVersionId !== versionId)
+    throw new AccessError(
+      "This version is read only. Refresh and open the current version to leave feedback.",
+      409,
+    );
   return access;
 }
 export async function threadPage(

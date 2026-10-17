@@ -327,7 +327,7 @@ export function ReviewWorkspace({
           <span>
             <MapPin size={14} />
             {readOnly
-              ? "Archived · read only"
+              ? "Read only · historical or archived"
               : "Click the image to leave feedback"}
           </span>
           <div>
