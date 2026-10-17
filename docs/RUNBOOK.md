@@ -49,17 +49,19 @@ pnpm build
 
 `pnpm format` formats maintained source/configuration/docs. The canonical imported roadmap, original planning files, generated client and migration SQL are excluded. Lint and formatting are separate checks; Next.js build does not run them for you.
 
-## Separate development Supabase project (pending account setup)
+## Separate development Supabase project
 
-1. Create a **development-only** Supabase project, separate from future production. No connected Supabase account was available for this step.
+1. Create a **development-only** Supabase project, separate from future production. The current development project was provisioned and verified on 17 October 2026. Credentials stay in ignored `.env`.
 2. Store development connection values and keys in ignored `.env` using `.env.example` as the field list. Never paste secrets into chat, commit them or add `NEXT_PUBLIC_` to privileged keys. A public publishable key is different from the server secret key.
-3. Use a dedicated database owner/role for Prisma as described in Supabase's integration guide. Scope application migration ownership to `app`. If using a separate role, grant only the privileges needed for that schema; do not make browser roles table owners.
+3. The current setup uses the dashboard-supplied database owner for Prisma. For a dedicated application role, follow Supabase's integration guide. Scope application migration ownership to `app`. If using a separate role, grant only the privileges needed for that schema; do not make browser roles table owners.
 4. Apply Prisma migrations to the verified **development** target with `pnpm db:deploy`. Do not run the local fixture seed on Supabase.
 5. In that project's SQL editor run `supabase/001_application_access.sql` as the table owner. This revokes browser grants, hardens defaults and enables RLS with no browser policies. Repeat after new application migrations; default privileges apply to the role executing the SQL, so use the same table-owning role consistently.
 6. Keep `app` out of the Data API exposed schemas in Supabase settings. The server checks membership/roles before data access in Step 2; RLS alone does not provide a user's identity context to Prisma.
 7. Run `supabase/002_private_bucket.sql` in the development SQL editor. It creates `review-room-private` with `public=false`, a 10 MiB ceiling and JPG/PNG/WebP MIME hints. An existing conflicting bucket causes an error instead of silently changing it. No browser object policies are added.
-8. Verify that the bucket is private, unauthenticated download is denied, and browser roles cannot read/write application tables. Record the results in PROGRESS.md. Until these checks are performed, hosted storage is **unverified**.
+8. Verify that the bucket is private, unauthenticated download is denied, and browser roles cannot read/write application tables. Record the results in PROGRESS.md. These checks passed for the current development project on 17 October 2026. `pnpm supabase:check` reruns read-only connection, role, API and bucket configuration checks; it does not create records, migrate, upload or send email.
 9. Auth callbacks, real identity and upload finalization come in Steps 2 and 4. No external recipient is contacted during setup.
+
+During initial private-storage verification, an agent-created temporary PNG was uploaded, read through privileged/signed access, denied through anonymous/public access, and then deleted. The application upload flow is still Step 4.
 
 Do not point the local integration harness or seed at Supabase. To return to local development, restore the loopback URLs from `.env.example` without overwriting any saved secret values.
 

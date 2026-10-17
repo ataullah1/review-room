@@ -3,7 +3,7 @@
 ## Step status
 
 - [x] Step 0 Scope and screens — user confirmed UI renders and authorized Step 1; remaining manual coverage recorded below
-- [ ] Step 1 Repository and foundation — local foundation verified; hosted Supabase private bucket pending
+- [x] Step 1 Repository and foundation — local and hosted development setup verified on 17 October 2026
 - [ ] Step 2 Identity and permissions
 - [ ] Step 3 Projects
 - [ ] Step 4 Private upload
@@ -15,7 +15,23 @@
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
 
-## Current session — 16 October 2026, Step 1
+## Current session — 17 October 2026, Step 1 complete
+
+- User explicitly authorized completing the remaining development Supabase migration, access hardening and private bucket setup.
+- Preflight verified the expected development pooler/project and existing auth/storage schemas. No application tables existed before migration.
+- Applied committed `20261016000100_foundation` using Prisma migrate deploy. Applied `supabase/001_application_access.sql` and `supabase/002_private_bucket.sql` to the development project only. No fixture seed was run against Supabase.
+- Remote results: five application tables plus Prisma migration tracking exist under app; RLS enabled. Migration status is up to date and schema diff reports no difference.
+- Added read-only `pnpm supabase:check` to recheck both database connections, table/RLS presence, browser-role grant denial, Data API schema exclusion, Auth settings and private bucket configuration without printing secrets.
+- `pnpm supabase:check`: passed. anon/authenticated have no application schema usage or table read/write privileges; direct role-impersonated reads reject with permission denied. Data API rejects app with PGRST106, confirming it is not exposed. Publishable and secret keys pass live checks; email verification is required.
+- Bucket: review-room-private, public=false, 10 MiB file limit, JPEG/PNG/WebP allowlist. Uploaded an agent-created temporary 1-pixel image: privileged download and 60-second signed URL returned 200 with expected bytes; public, unauthenticated and publishable-only downloads were denied. Deleted the temporary object successfully.
+- Corrected a pre-existing filename typo in the integration-test package script. The test command initially failed because the local cluster was stopped; started only the owned cluster and reran successfully. Remote runtime URLs were preserved.
+- Checks: lint (zero warnings), typecheck, 13 unit tests, 5 local PostgreSQL integration tests and production build passed. Local cluster remains available on port 55432; integration tests never target Supabase.
+- Updated README, RUNBOOK and DECISIONS to describe the completed development setup. Earlier dated sections below are historical records, not current blockers.
+- Remaining limits: UI is still a static prototype. Verified identity, authorization helpers, private pages and sign-in flows are Step 2. No browser/device checks, real application uploads or email delivery were claimed. Current dashboard-supplied database owner is used by Prisma; keep database calls server-only and implement authorization before exposing private data.
+- No deployment, push, production data change or external message. No commit created during this session.
+- Next task: Step 2 — Supabase SSR identity, email verification, idempotent workspace bootstrap and role/project authorization with denied-access tests.
+
+## Previous foundation session — 16 October 2026, Step 1
 
 - User accepted the rendered prototype and requested the next step. User explicitly chose local setup because no development Supabase project exists yet.
 - Local completion: Prisma 7.10.1 CLI/client/pg adapter; server-only reusable database client; app-only schema; initial versioned migration; deterministic seed; dedicated development/test databases; local cluster lifecycle scripts; environment placeholders and validation; Tailwind v4 utilities/tokens and shadcn composition primitive; ESLint, Prettier and Vitest scripts; setup/runbook documentation.

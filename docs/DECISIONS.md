@@ -2,7 +2,7 @@
 
 ## Scope and architecture
 
-- One Next.js App Router application and repository. Frontend and server responsibilities stay separate. PostgreSQL, Prisma and Supabase Auth/private Storage follow in later steps.
+- One Next.js App Router application and repository. Frontend and server responsibilities stay separate. PostgreSQL, Prisma and private Supabase Storage are configured in Step 1; Supabase Auth application flows follow in Step 2.
 - Step 0 includes only the minimum Next.js setup needed for static screens. Step 1 remains incomplete until database, migrations, seed, environment setup and quality configuration are verified.
 - English interface; warm neutral workspace, restrained sage accent, image-first review canvas. Sample artwork is original CSS typography and shapes, with no external client assets.
 - Initial screens: project list, desktop asset review and responsive mobile comment drawer.
@@ -51,8 +51,8 @@ The 30–60 second comprehension check needs a human walkthrough. Real-device an
 ## Step 1 foundation
 
 - User confirmed the local prototype renders and requested the next step. Browser/real-phone verification remains recorded separately.
-- Dedicated local PostgreSQL 18 cluster on port 55432; development and integration-test databases are separate from existing system databases. No Supabase account exists yet, so hosted Auth/Storage provisioning remains pending.
-- Prisma 7.10.1 CLI/client/adapter are pinned together; TypeScript 6.0.3 is selected because the current typescript-eslint parser rejects TypeScript 7. ESLint 10 is supported by Next.js 16.4.2's documented configuration, although bundled third-party plugins have older peer ranges. Actual lint must pass.
+- Dedicated local PostgreSQL 18 cluster on port 55432; development and integration-test databases are separate from existing system databases. Hosted development Supabase migrations and private storage provisioning were completed and verified on 17 October 2026.
+- Prisma 7.10.1 CLI/client/adapter are pinned together; TypeScript 6.0.3 is selected because the current typescript-eslint parser rejects TypeScript 7. ESLint 10 is supported by Next.js 16.4.2's documented configuration, although bundled third-party plugins have older peer ranges. Lint and production build pass with these versions.
 - Prisma owns only `app`; initial tables are private with RLS enabled and PUBLIC schema/table grants revoked. Browser grants and storage setup are separately versioned in `supabase/`. Authorization is not implemented yet.
 - Project assignment has composite foreign keys to both the project and workspace membership, preventing a forged workspace association at the database level. This is a structural invariant, not a replacement for route/mutation permission tests in Step 2.
 - Tailwind v4 utilities and shadcn aliases/composition primitives are configured while retaining existing styles. The current custom reset is preserved to avoid a visual redesign.
