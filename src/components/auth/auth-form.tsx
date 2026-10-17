@@ -48,7 +48,10 @@ export function AuthForm({
     setPending(true);
     setError("");
     try {
-      const response = await fetch("/auth/google", { method: "POST" });
+      const response = await fetch("/auth/google", {
+        method: "POST",
+        headers: { "x-review-return-to": next || "/app" },
+      });
       const data = await response.json();
       if (!response.ok)
         throw new Error(data.error || "Could not start Google sign-in.");
@@ -190,7 +193,9 @@ export function AuthForm({
         </form>
         <p className="auth-switch">
           {signup ? "Already have an account?" : "New to Review Room?"}{" "}
-          <Link href={signup ? "/login" : "/signup"}>
+          <Link
+            href={`${signup ? "/login" : "/signup"}${next === "/invite/accept" ? "?next=%2Finvite%2Faccept" : ""}`}
+          >
             {signup ? "Log in" : "Create an account"}
           </Link>
         </p>

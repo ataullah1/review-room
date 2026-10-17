@@ -58,14 +58,15 @@ model Membership {
 }
 
 model Project {
-  id          String          @id @default(uuid()) @db.Uuid
-  workspaceId String          @db.Uuid
-  name        String          @db.VarChar(150)
-  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
-  archivedAt  DateTime?       @db.Timestamptz(3)
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String              @id @default(uuid()) @db.Uuid
+  workspaceId String              @db.Uuid
+  name        String              @db.VarChar(150)
+  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
+  archivedAt  DateTime?           @db.Timestamptz(3)
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members     ProjectMember[]
   assets      Asset[]
+  invitations ProjectInvitation[]
 
   @@unique([id, workspaceId])
   @@index([workspaceId, archivedAt, createdAt, id])
@@ -158,6 +159,7 @@ model AssetVersion {
   currentFor       Asset?             @relation("CurrentVersion")
   comments         Comment[]
   reviewDecisions  ReviewDecision[]
+  shares           ShareLink[]
   creator          UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
 
   @@unique([id, assetId])
@@ -212,5 +214,45 @@ model ReviewDecision {
   @@unique([versionId, decisionNumber])
   @@index([versionId, createdAt, id])
   @@index([versionId, reviewerId, createdAt, id])
+  @@schema("app")
+}
+
+model ProjectInvitation {
+  id           String        @id @default(uuid()) @db.Uuid
+  projectId    String        @db.Uuid
+  workspaceId  String        @db.Uuid
+  email        String        @db.VarChar(254)
+  role         WorkspaceRole
+  tokenHash    String        @unique @db.Char(64)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  expiresAt    DateTime      @db.Timestamptz(3)
+  acceptedAt   DateTime?     @db.Timestamptz(3)
+  acceptedById String?       @db.Uuid
+  revokedAt    DateTime?     @db.Timestamptz(3)
+  project      Project       @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+
+  @@index([projectId, createdAt, id])
+  @@schema("app")
+}
+
+model ShareLink {
+  id        String       @id @default(uuid()) @db.Uuid
+  versionId String       @db.Uuid
+  tokenHash String       @unique @db.Char(64)
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime     @db.Timestamptz(3)
+  revokedAt DateTime?    @db.Timestamptz(3)
+  version   AssetVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId, createdAt, id])
+  @@schema("app")
+}
+
+model CapabilityRateBucket {
+  keyHash   String   @id @db.Char(64)
+  attempts  Int
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
   @@schema("app")
 }

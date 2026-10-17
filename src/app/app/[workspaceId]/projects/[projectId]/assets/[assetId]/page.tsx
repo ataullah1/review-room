@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OwnerLinks } from "@/features/sharing/owner-links";
 import { versionPage, decisionPage } from "@/lib/data/reviews";
 import { VersionControls } from "@/features/reviews/version-controls";
 import { VersionComparison } from "@/features/reviews/comparison";
@@ -164,6 +165,15 @@ export default async function ReviewPage({
           readOnly={
             !!project.archivedAt || asset.currentVersionId !== version.id
           }
+        />
+      )}
+      {member.role === "OWNER" && (
+        <OwnerLinks
+          key={version.id}
+          kind="share"
+          endpoint={`${base}/shares`}
+          versionId={version.id}
+          disabled={!!project.archivedAt}
         />
       )}
       <DecisionPanel

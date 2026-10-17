@@ -8,6 +8,7 @@ export const signupSchema = loginSchema.extend({
   password: z.string().min(10).max(128),
 });
 export function safeReturnPath(value: string | null | undefined) {
+  if (value === "/invite/accept") return value;
   return value && /^\/app(?:\/[a-zA-Z0-9_-]+)*\/?$/.test(value)
     ? value
     : "/app";

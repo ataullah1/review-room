@@ -7,6 +7,7 @@ export function identityFromUser(user: User) {
   return {
     id: user.id,
     email: user.email,
+    emailVerified: !!user.email_confirmed_at,
     displayName: [
       user.user_metadata?.display_name,
       user.user_metadata?.full_name,

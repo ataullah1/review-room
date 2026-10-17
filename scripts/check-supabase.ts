@@ -52,6 +52,9 @@ async function checkDatabase(
       "AssetVersion",
       "Comment",
       "ReviewDecision",
+      "ProjectInvitation",
+      "ShareLink",
+      "CapabilityRateBucket",
     ];
     requireCheck(
       expected.every((name) =>

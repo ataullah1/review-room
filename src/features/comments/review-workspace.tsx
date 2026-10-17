@@ -37,6 +37,7 @@ export function ReviewWorkspace({
   initial,
   canResolve,
   readOnly,
+  feedbackUrl,
 }: {
   base: string;
   versionId: string;
@@ -47,6 +48,7 @@ export function ReviewWorkspace({
   initial: ThreadPage;
   canResolve: boolean;
   readOnly: boolean;
+  feedbackUrl?: string;
 }) {
   const [threads, setThreads] = useState(initial.threads),
     [next, setNext] = useState(initial.next),
@@ -73,7 +75,9 @@ export function ReviewWorkspace({
       dragged: boolean;
     } | null>(null);
   const replyDrafts = useRef<Record<string, { id: string; body: string }>>({});
-  const endpoint = `${base}/comments?versionId=${encodeURIComponent(versionId)}`;
+  const endpoint = feedbackUrl
+    ? `${feedbackUrl}?versionId=${encodeURIComponent(versionId)}`
+    : `${base}/comments?versionId=${encodeURIComponent(versionId)}`;
 
   useEffect(() => {
     const node = viewport.current;
@@ -327,7 +331,7 @@ export function ReviewWorkspace({
           <span>
             <MapPin size={14} />
             {readOnly
-              ? "Read only · historical or archived"
+              ? "Read only · feedback is preserved"
               : "Click the image to leave feedback"}
           </span>
           <div>

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { authConfiguration, createAuthClient } from "@/lib/auth/supabase";
-import { requireSameOrigin } from "@/lib/auth/validation";
+import { safeReturnPath, requireSameOrigin } from "@/lib/auth/validation";
 import {
   beginGoogle,
   googleIntentCookie,
@@ -60,6 +60,17 @@ export async function POST(request: NextRequest) {
         return data.url;
       },
     });
+    (await cookies()).set(
+      "rr_auth_next",
+      safeReturnPath(request.headers.get("x-review-return-to")),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/auth/callback",
+        maxAge: 300,
+      },
+    );
     (await cookies()).set(googleIntentCookie, result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

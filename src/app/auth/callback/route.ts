@@ -17,6 +17,14 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const jar = await cookies();
   const token = jar.get(googleIntentCookie)?.value;
+  const next = jar.get("rr_auth_next")?.value;
+  jar.set("rr_auth_next", "", {
+    path: "/auth/callback",
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
   jar.set(googleIntentCookie, "", {
     path: "/auth/callback",
     maxAge: 0,
@@ -58,6 +66,7 @@ export async function GET(request: NextRequest) {
   } finally {
     if (token) await discardSignupPermit(getDb(), token).catch(() => undefined);
   }
+  if (path.startsWith("/app") && next === "/invite/accept") path = next;
   return NextResponse.redirect(
     new URL(path, process.env.NEXT_PUBLIC_APP_URL!),
     { headers: { "Cache-Control": "private, no-store" } },

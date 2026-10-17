@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OwnerLinks } from "@/features/sharing/owner-links";
 import Image from "next/image";
 import { UploadPanel } from "@/features/uploads/upload-panel";
 import { projectFilters } from "@/features/projects/validation";
@@ -146,6 +147,11 @@ export default async function ProjectPage({
               assignedIds={assignedIds}
             />
           )}
+          <OwnerLinks
+            kind="invite"
+            endpoint={`/app/${workspaceId}/projects/${projectId}/invitations`}
+            disabled={!!project.archivedAt}
+          />
           <ArchiveProjectForm
             key={String(!!project.archivedAt)}
             workspaceId={workspaceId}
