@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/permissions";
 import { projectDirectory, assignableMembers } from "@/lib/data/projects";
 import { projectFilters } from "@/features/projects/validation";
+import { listAssets } from "@/lib/data/uploads";
 import { getDb } from "./db";
 
 export async function getUserWorkspaces() {
@@ -43,7 +44,11 @@ export async function getWorkspaceProjects(
     };
   });
 }
-export async function getProject(workspaceId: string, projectId: string) {
+export async function getProject(
+  workspaceId: string,
+  projectId: string,
+  assetPage = 1,
+) {
   const user = await requireUser();
   return withUserDatabase(getDb(), user.id, async (tx) => {
     const { project, member } = await requireProjectAccess(
@@ -55,6 +60,13 @@ export async function getProject(workspaceId: string, projectId: string) {
     return {
       project,
       member,
+      assetDirectory: await listAssets(
+        tx,
+        user.id,
+        workspaceId,
+        projectId,
+        assetPage,
+      ),
       people:
         member.role === "OWNER"
           ? await assignableMembers(tx, user.id, workspaceId)

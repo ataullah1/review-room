@@ -48,6 +48,8 @@ async function checkDatabase(
       "Membership",
       "Project",
       "ProjectMember",
+      "Asset",
+      "AssetVersion",
     ];
     requireCheck(
       expected.every((name) =>

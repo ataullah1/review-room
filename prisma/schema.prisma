@@ -19,11 +19,12 @@ enum WorkspaceRole {
 model UserProfile {
   // Equals a verified Supabase Auth user ID after Step 2.
   // Local seed identities are fixtures and cannot sign in.
-  id             String       @id @db.Uuid
-  displayName    String       @db.VarChar(100)
-  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  id             String         @id @db.Uuid
+  displayName    String         @db.VarChar(100)
+  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
   memberships    Membership[]
-  ownedWorkspace Workspace?   @relation("WorkspaceCreator")
+  assetVersions  AssetVersion[]
+  ownedWorkspace Workspace?     @relation("WorkspaceCreator")
 
   @@schema("app")
 }
@@ -62,6 +63,7 @@ model Project {
   archivedAt  DateTime?       @db.Timestamptz(3)
   workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members     ProjectMember[]
+  assets      Asset[]
 
   @@unique([id, workspaceId])
   @@index([workspaceId, archivedAt, createdAt, id])
@@ -96,5 +98,66 @@ model SignupPermit {
   expiresAt DateTime @db.Timestamptz(3)
 
   @@index([expiresAt])
+  @@schema("app")
+}
+
+enum AssetVersionStatus {
+  PENDING
+  READY
+  FAILED
+
+  @@schema("app")
+}
+
+model Asset {
+  id               String         @id @default(uuid()) @db.Uuid
+  projectId        String         @db.Uuid
+  workspaceId      String         @db.Uuid
+  title            String         @db.VarChar(150)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  currentVersionId String?        @unique @db.Uuid
+  project          Project        @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  versions         AssetVersion[] @relation("AssetVersions")
+  currentVersion   AssetVersion?  @relation("CurrentVersion", fields: [currentVersionId, id], references: [id, assetId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id, projectId, workspaceId])
+  @@unique([currentVersionId, id])
+  @@index([projectId, workspaceId, createdAt, id])
+  @@schema("app")
+}
+
+model AssetVersion {
+  id               String             @id @default(uuid()) @db.Uuid
+  assetId          String             @db.Uuid
+  projectId        String             @db.Uuid
+  workspaceId      String             @db.Uuid
+  versionNumber    Int                @default(1)
+  status           AssetVersionStatus @default(PENDING)
+  creatorId        String             @db.Uuid
+  originalName     String             @db.VarChar(255)
+  expectedMimeType String             @db.VarChar(30)
+  expectedSize     Int
+  mimeType         String?            @db.VarChar(30)
+  fileSize         Int?
+  width            Int?
+  height           Int?
+  contentHash      String?            @db.Char(64)
+  stagingKey       String             @unique
+  objectKey        String             @unique
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  expiresAt        DateTime           @db.Timestamptz(3)
+  cleanupAfter     DateTime           @db.Timestamptz(3)
+  cleanedAt        DateTime?          @db.Timestamptz(3)
+  processingToken  String?            @db.Uuid
+  processingUntil  DateTime?          @db.Timestamptz(3)
+  failureReason    String?            @db.VarChar(200)
+  asset            Asset              @relation("AssetVersions", fields: [assetId, projectId, workspaceId], references: [id, projectId, workspaceId], onDelete: Cascade)
+  currentFor       Asset?             @relation("CurrentVersion")
+  creator          UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+
+  @@unique([id, assetId])
+  @@unique([assetId, versionNumber])
+  @@index([workspaceId, projectId, status, createdAt])
+  @@index([cleanupAfter, cleanedAt])
   @@schema("app")
 }

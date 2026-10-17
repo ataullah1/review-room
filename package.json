@@ -23,7 +23,8 @@
     "db:local:start": "node scripts/local-database.mjs start",
     "db:local:stop": "node scripts/local-database.mjs stop",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check",
-    "supabase:check": "tsx scripts/check-supabase.ts"
+    "supabase:check": "tsx scripts/check-supabase.ts",
+    "uploads:cleanup": "tsx scripts/cleanup-uploads.ts"
   },
   "dependencies": {
     "next": "16.4.2",
@@ -40,7 +41,8 @@
     "class-variance-authority": "0.7.1",
     "@radix-ui/react-slot": "1.5.0",
     "@supabase/ssr": "0.12.7",
-    "@supabase/supabase-js": "2.118.0"
+    "@supabase/supabase-js": "2.118.0",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "typescript": "6.0.3",

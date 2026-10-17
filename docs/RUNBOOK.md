@@ -154,3 +154,37 @@ Deploy application policy changes with `pnpm db:deploy`: migrations `20261017000
 Checks: `pnpm check`, `pnpm test:integration`, `pnpm build`, `pnpm supabase:check`. Integration tests use only the dedicated local test database. Development Supabase connection timeouts can surface the project retry state; an error does not prove a previous write failed. Project creation retries reuse the same submission ID while the form is mounted; archive/restore are idempotent. Refreshing a creation form starts a new submission.
 
 Live Step 3 acceptance on 17 October 2026 used an agent-owned, confirmed temporary Auth account without sending email, a separate temporary workspace, and the user's existing development server. Browser creation/archive/restore/search/logout and desktop/mobile rendering passed. Database connection/transaction timeouts also exercised the error state; its Try again button uses this installed Next.js version's `retry()` prop to fetch fresh server content. All temporary application and Auth records were removed afterward. No user projects were created, archived or modified by this test.
+
+### Step 4 private image uploads
+
+Apply the versioned application migration and regenerate the client:
+
+```sh
+pnpm db:deploy
+pnpm db:generate
+pnpm supabase:check
+```
+
+No additional environment secret or Dashboard setting is required for the already-configured development project. `SUPABASE_SECRET_KEY` stays server-only; `review-room-private` remains private with a 10 MiB limit and only image/jpeg, image/png and image/webp. Browser roles still have no direct application-table grants or unrestricted storage policy. Do not expose the bucket or add a broad authenticated storage policy to make uploads work.
+
+Open an active project as its owner or assigned designer, choose one JPG/PNG/static WebP, then Upload image. Images must be <=10 MiB, <=20 MP and <=8192 pixels on either side. Assigned clients can view READY images but cannot upload. Project images paginate 12 at a time and survive refresh; clicking an image opens its private original in a new tab. Archived projects retain existing images but cannot accept uploads. Comments/approval/version comparison have not been implemented in this step.
+
+The app's prepare/finalize/cancel Route Handlers accept at most 4096 bytes of JSON; file bytes go from browser to Storage. Vercel Functions have a 4.5 MB inbound/response payload limit, so sending a 10 MB File through Server Actions or the app API is intentionally avoided. Finalize is a Node route with maxDuration=60: it downloads the staging object server-to-server with a 10 MiB stream cap, validates signatures and fully decodes the image with sharp, writes a distinct immutable object, and atomically updates READY/currentVersionId. Original bytes are preserved; verified SHA-256, MIME, byte size and dimensions are stored. A decoder or network failure leaves no readable current version.
+
+Supabase createSignedUploadUrl has a provider-fixed two-hour expiry; the current API does not accept an application-selected shorter TTL. The application's reservation/finalize window is 10 minutes and a single processing claim lasts two minutes. Tokens are restricted to random staging paths, with upsert=false. The validated final image uses a different server-only key, so the staging capability cannot replace READY bytes. No token/code/signed URL is logged. This design bounds provider capabilities but does not revoke them when Cancel is clicked; cancellation prevents publication and queues cleanup. If final publication already won the race, cancellation returns the saved result and preserves it.
+
+Authorized image reads go through `/app/[workspaceId]/projects/[projectId]/assets/[assetId]/file`: verify current membership/project scope, require a READY current version, then issue a 60-second private Storage redirect with no-store and no-referrer headers. Thumbnails use unoptimized image rendering, so Next's shared image optimizer never caches private originals. Revocation blocks newly issued capabilities immediately; a previously issued URL can work for its remaining 60 seconds, and already downloaded copies cannot be recalled.
+
+Cleanup is durable and retryable:
+
+```sh
+pnpm uploads:cleanup
+```
+
+This expires abandoned PENDING attempts after their finalize deadline/processing lease. Immediate failure/cancel cleanup is best effort; the durable sweeper revisits staging and failed final keys after 125 minutes, covering the two-hour provider capability lifetime and a five-minute grace. READY final keys are never deleted. Storage-delete failures keep cleanedAt unset for retry. Rows are retained as cleanup tombstones; incomplete assets do not appear in the gallery. Run cleanup again after connectivity failures.
+
+A successful prepare also runs a small cleanup batch through Next's after() hook. With no future traffic, run the CLI periodically yourself or schedule it in the deployment step; no hosted cron has been configured or claimed here, and no extra paid service is required. The CLI uses privileged database/storage clients only for server-owned expired upload rows; it accepts no user-provided object keys. Database work and storage calls are separate, and UTC is set explicitly for expiry comparisons.
+
+Verification: `pnpm check`, `pnpm test:integration`, `pnpm build`, `pnpm supabase:check`, `pnpm uploads:cleanup`. Local tests use real PostgreSQL/RLS plus an injected storage adapter; image tests use real sharp codecs. Live acceptance used temporary confirmed Auth accounts and an isolated workspace, tested a 5.36 MiB image via Storage, fake PNG rejection, designer/client permissions, native Chrome cancellation/retry/upload/thumbnail rendering and revocation, then removed all temporary objects/accounts/application records. No actual Vercel deployment has been tested. Development database/network timeouts may still surface retry states; no timeout elimination is claimed.
+
+Sources: [Supabase signed-upload lifetime](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl), [signed uploads](https://supabase.com/docs/reference/javascript/storage-from-uploadtosignedurl), [private signed downloads](https://supabase.com/docs/guides/storage/serving/downloads), [Vercel function payload limits](https://vercel.com/docs/functions/limitations), [sharp metadata and pixel statistics](https://sharp.pixelplumbing.com/api-input/), [sharp decoder limits](https://sharp.pixelplumbing.com/api-constructor/).

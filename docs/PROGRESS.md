@@ -6,7 +6,7 @@
 - [x] Step 1 Repository and foundation — local and hosted development setup verified on 17 October 2026
 - [x] Step 2 Identity and permissions — application tests, live immediate signup and active provider-hook enforcement verified on 17 October 2026
 - [x] Step 3 Projects — permissions, automated checks and live browser flow verified on 17 October 2026
-- [ ] Step 4 Private upload
+- [x] Step 4 Private upload — validated private storage, permissions, cleanup and live browser acceptance verified on 17 October 2026
 - [ ] Step 5 Image comments
 - [ ] Step 6 Versions and approval
 - [ ] Step 7 Invitation and share links
@@ -14,6 +14,21 @@
 - [ ] Step 9 Isolated demo
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
+
+## Step 4 — private image upload (17 October 2026)
+
+- Added Asset and AssetVersion with composite project/workspace FKs, creator identity, immutable server-generated object keys, expected/verified metadata, content hashes, version number 1, PENDING/READY/FAILED states, expiry/processing leases and durable cleanup markers. Current-version FKs/triggers require the same asset and READY state; READY metadata cannot be rewritten. Existing project memberships and roles remain unchanged.
+- Only workspace owners and assigned designers can prepare/finalize uploads, and only in active projects. All HTTP paths verify the Supabase user and execute identity-scoped reads/writes under the non-bypass request role. Finalization rechecks membership/archive state after external storage work. Client/unassigned/outsider upload and forged nested IDs are denied before signing capabilities.
+- Browser sends only bounded JSON metadata to app Route Handlers; actual file bytes upload directly to a narrowly scoped signed Supabase Storage URL using XHR progress. Client selection filters are advisory. Server checks actual byte length, magic/decoded format, filename/type agreement, complete pixel decode through sharp.stats(), dimensions <=8192 each, <=20,000,000 pixels and <=10 MiB. SVG/GIF/other formats, corrupt data, APNG and animated WebP are rejected.
+- A staging key is never a READY version's object key. After validation the server writes a separate immutable private object with upsert=false, then atomically publishes READY/currentVersionId. Concurrent claims, duplicate finalize, late cancel and ambiguous commit handling preserve published objects; failed/cancelled attempts never become current. Server-generated image dimensions/hash/size come from verified bytes.
+- Supabase upload capabilities have a provider-fixed two-hour lifetime. App finalization expires after 10 minutes; claims have a two-minute processing lease; download capabilities last 60 seconds. Failed staging/final objects are removed immediately where possible and swept again after capability expiry plus five minutes. READY final objects are excluded from cleanup. Abandoned attempts become FAILED, and cleanup failures remain durably queued. No TTL shortening or active cron deployment is claimed.
+- Added owner/designer upload panel with file selection, progress, cancel, retry and validation feedback, and a responsive paginated gallery for authorized viewers. Private images use an authenticated no-store redirect and unoptimized image tags, keeping bytes out of app responses and Next image caches. Archived projects remain viewable; uploading stays disabled. Comments, approvals and subsequent version upload remain later steps.
+- Added bounded opportunistic cleanup after authorized prepare requests and `pnpm uploads:cleanup` for idle-period/operational cleanup. Maintenance explicitly uses UTC so pooled database time zones cannot shift expiry comparisons. Pending/failed attempt rows are retained for cleanup rather than presented as usable assets.
+- Applied additive migration `20261017000600_private_assets` to the dedicated local test database and development Supabase; generated Prisma client and verified no schema difference. Fixed development client caching to rebuild the singleton when generated model names change, so the running dev server can use new Asset models without a manual restart. Added sharp 0.35.5 as an exact direct dependency; existing packages were not upgraded.
+- Checks passed: 64 unit/session tests, 41 real PostgreSQL integration tests, lint, typecheck, formatting, production build, migration/schema drift check, live Supabase configuration checks and cleanup CLI. Tests cover real image decodes and forged/corrupt/animated/oversize inputs, RLS writes, tenant/role restrictions, pointer invariants, READY immutability, concurrent claims, archive/revocation rechecks, cancel/finalize races, quotas and cleanup retries/late staging replay.
+- Live acceptance passed: assigned client prepare denied 403; assigned designer direct upload/finalize; duplicate finalize; client download of identical validated bytes; public URL denial; a valid 5.36 MiB image uploaded directly to Storage and finalized; fake PNG rejected with FAILED/cleanup; real Chrome native file chooser, cancel during preparation, retry, XHR upload/progress and saved thumbnails; desktop 1440px and mobile 390px without horizontal overflow; assignment revocation denied new file capabilities. Temporary objects, workspaces, profiles and Auth accounts were removed. Existing port-3000 dev server was left running. No deployment or Dashboard settings change was performed.
+- Production bundle scan: 17 browser JavaScript files checked; no database URL/password, server Supabase secret or signup HMAC secret found.
+- Next: Step 5 image comments and replies. It has not been started.
 
 ## Step 3 — project foundation (17 October 2026)
 
