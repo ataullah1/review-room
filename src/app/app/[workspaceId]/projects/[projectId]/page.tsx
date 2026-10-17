@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ActivityPanel } from "@/features/activity/activity-panel";
 import { OwnerLinks } from "@/features/sharing/owner-links";
 import Image from "next/image";
 import { UploadPanel } from "@/features/uploads/upload-panel";
@@ -137,6 +138,11 @@ export default async function ProjectPage({
           )}
         </nav>
       )}
+      <ActivityPanel
+        key={projectId}
+        workspaceId={workspaceId}
+        projectId={projectId}
+      />
       {member.role === "OWNER" && (
         <>
           {!project.archivedAt && (

@@ -19,14 +19,15 @@ enum WorkspaceRole {
 model UserProfile {
   // Equals a verified Supabase Auth user ID after Step 2.
   // Local seed identities are fixtures and cannot sign in.
-  id              String           @id @db.Uuid
-  displayName     String           @db.VarChar(100)
-  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  id              String                @id @db.Uuid
+  displayName     String                @db.VarChar(100)
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
   memberships     Membership[]
   assetVersions   AssetVersion[]
   comments        Comment[]
   reviewDecisions ReviewDecision[]
-  ownedWorkspace  Workspace?       @relation("WorkspaceCreator")
+  activityReads   ProjectActivityRead[]
+  ownedWorkspace  Workspace?            @relation("WorkspaceCreator")
 
   @@schema("app")
 }
@@ -58,15 +59,17 @@ model Membership {
 }
 
 model Project {
-  id          String              @id @default(uuid()) @db.Uuid
-  workspaceId String              @db.Uuid
-  name        String              @db.VarChar(150)
-  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
-  archivedAt  DateTime?           @db.Timestamptz(3)
-  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  members     ProjectMember[]
-  assets      Asset[]
-  invitations ProjectInvitation[]
+  id            String                @id @default(uuid()) @db.Uuid
+  workspaceId   String                @db.Uuid
+  name          String                @db.VarChar(150)
+  createdAt     DateTime              @default(now()) @db.Timestamptz(3)
+  archivedAt    DateTime?             @db.Timestamptz(3)
+  workspace     Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members       ProjectMember[]
+  assets        Asset[]
+  invitations   ProjectInvitation[]
+  activity      ActivityEvent[]
+  activityReads ProjectActivityRead[]
 
   @@unique([id, workspaceId])
   @@index([workspaceId, archivedAt, createdAt, id])
@@ -254,5 +257,51 @@ model CapabilityRateBucket {
   expiresAt DateTime @db.Timestamptz(3)
 
   @@index([expiresAt])
+  @@schema("app")
+}
+
+enum ActivityKind {
+  UPLOAD_READY
+  COMMENT_CREATED
+  REPLY_CREATED
+  THREAD_RESOLVED
+  THREAD_REOPENED
+  REVIEW_APPROVED
+  CHANGES_REQUESTED
+  INVITE_ACCEPTED
+
+  @@schema("app")
+}
+
+model ActivityEvent {
+  id            BigInt       @id @default(autoincrement())
+  projectId     String       @db.Uuid
+  workspaceId   String       @db.Uuid
+  sourceKey     String       @unique
+  kind          ActivityKind
+  actorId       String?      @db.Uuid
+  actorName     String       @db.VarChar(100)
+  assetId       String?      @db.Uuid
+  versionId     String?      @db.Uuid
+  versionNumber Int?
+  threadNumber  Int?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  project       Project      @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+
+  @@index([projectId, workspaceId, id])
+  @@schema("app")
+}
+
+model ProjectActivityRead {
+  projectId       String      @db.Uuid
+  workspaceId     String      @db.Uuid
+  userId          String      @db.Uuid
+  lastReadEventId BigInt      @default(0)
+  lastReadAt      DateTime    @db.Timestamptz(3)
+  project         Project     @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  user            UserProfile @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, userId])
+  @@index([workspaceId, userId])
   @@schema("app")
 }

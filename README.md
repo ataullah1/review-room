@@ -43,7 +43,7 @@ pnpm supabase:check
 - `supabase`: versioned access-hardening and private bucket SQL, separate from Prisma.
 - `tests`: configuration safety and real PostgreSQL integration checks.
 
-Visit `/signup` or `/login` for real Auth and `/app` for your workspaces. The private app supports projects, validated image uploads, version-bound comments/replies, immutable version history, side-by-side comparison and individual assigned-client review decisions. Historical versions are read only; new versions require fresh client review. Owners can also create email-bound project invitations and expiring read-only version links. The general Activity feed remains a later step. Google Fonts has system fallbacks; sample artwork is local CSS. Font hosting must be revisited before private client content ships.
+Visit `/signup` or `/login` for real Auth and `/app` for your workspaces. The private app supports projects, validated image uploads, version-bound comments/replies, immutable version history, side-by-side comparison and individual assigned-client review decisions. Historical versions are read only; new versions require fresh client review. Owners can also create email-bound project invitations and expiring read-only version links. Project activity shows uploads, feedback, decisions and accepted invitations, with per-user unread state and refresh on focus. The isolated public demo remains a later step. Google Fonts has system fallbacks; sample artwork is local CSS. Font hosting must be revisited before private client content ships.
 
 - [Roadmap](docs/ROADMAP.md)
 - [Progress and verification](docs/PROGRESS.md)

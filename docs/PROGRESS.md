@@ -10,10 +10,21 @@
 - [x] Step 5 Image comments — focused permission/coordinate tests and live browser walkthrough verified on 17 October 2026
 - [x] Step 6 Versions and approval — immutable upload, independent client decisions, concurrency and live comparison flow verified on 17 October 2026
 - [x] Step 7 Invitation and share links — focused authorization/rate tests and live invitation/share/revoke flow verified on 17 October 2026
-- [ ] Step 8 Activity
+- [x] Step 8 Activity — atomic events, persistent unread state, focused tests and browser flow verified on 17 October 2026
 - [ ] Step 9 Isolated demo
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
+
+## Step 8 — project activity and unread state (17 October 2026)
+
+- Added project-scoped ActivityEvent and per-project/user ProjectActivityRead. Database triggers record READY publication, root/reply creation, resolve/reopen, client decisions and invitation acceptance in the same transaction as each domain write. Failed/rolled-back writes create no committed event. Source keys deduplicate retried creations/decisions/acceptance; resolution emits only for a real state transition. Events contain identity snapshots/resource IDs and numbers, without comment bodies, review notes, invitation emails or tokens. Existing history is not backfilled; capture starts when this migration is applied.
+- Event writes serialize with the existing project transaction lock. Monotonic bigint event IDs provide a committed high-water mark; the read state stores lastReadAt plus lastReadEventId to handle same-time events and stale/concurrent read requests. Mark as read uses the head the user actually saw, not a newly queried maximum. Retried/older marks cannot move backwards or clear unseen events. Per-user state survives reload and remains independent between reviewers.
+- Added a 20-event cursor-paginated feed on project detail, unread count/dots, Mark as read, explicit Refresh activity, and refresh on window focus. Version links open the corresponding immutable version. No websocket, email, global inbox or unrelated feature was added. Archived feeds remain readable/markable; revoked/unassigned/outsider access is denied.
+- Feed/marker routes re-verify Auth, origin for POST and nested project membership, then run under the non-bypass request role. RLS scopes events to accessible projects and markers to their own user. Events have SELECT-only request grants; marker guards reject foreign/future/backwards IDs. Anonymous share role gets no activity access. Bigint cursors serialize as strings with bounded validation.
+- Applied migration `20261017001200_project_activity` to the guarded local test database and development Supabase, regenerated Prisma, and updated read-only schema/RLS expectations. No Dashboard setting, dependency, paid service or deployment changed.
+- Focused checks passed: 3 activity contract tests and 7 real PostgreSQL integration tests for every event type, rollback/retry behavior, accepted-invite deduplication, persistent/independent unread state, stale marks, pagination, RLS/direct-forgery denial, archived access and revocation. Lint, typecheck and production build passed. Hosted schema diff reports no difference. No unrelated full-suite rerun.
+- Live headless Chrome acceptance passed: a new comment appeared unread; Mark as read persisted across reload; focus refresh picked up a new comment; explicit refresh showed an approval; retrying that decision retained one event; another user retained an independent unread count; anonymous/unassigned project reads denied 401/403; desktop and 390px mobile screenshots inspected without overflow. An earlier attempt stopped on a failed hosted comment request; the successful walkthrough completed with bounded same-submission retry support in the harness. Temporary activity/read markers, application/Auth records and the test Storage image were removed. Existing development server left running. Physical devices and elimination of hosted connection failures are not claimed.
+- No staging, commit or push; the user will commit. Step 9 isolated demo remains out of scope.
 
 ## Step 7 — invitations and read-only version links (17 October 2026)
 
