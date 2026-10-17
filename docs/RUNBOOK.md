@@ -140,3 +140,17 @@ Provider setup, if configuring another environment:
 On 17 October 2026 the public settings endpoint reported Google enabled and email confirmation off. App OAuth initiation returned 200 with HttpOnly intent and PKCE cookies, and Supabase authorization returned 302 to `accounts.google.com`. The new hook migration was applied to development Supabase. No Google Dashboard setting was changed by the agent. The callback allowlist, Google consent configuration, and completed interactive Google sign-in were not independently verified; finish one browser sign-in to accept the live flow.
 
 Reference: [Supabase Google OAuth setup and SSR callback](https://supabase.com/docs/guides/auth/social-login/auth-google).
+
+### Step 3 projects
+
+Open `/app`, select a workspace, then **New project**. Only owners can create projects, assign existing designers/clients, or archive/restore. New workspaces have no designers/clients until membership exists; the creation form explains this and still allows creating an unassigned project. Invitations remain Step 7; do not add fake accounts or run the local seed on hosted Supabase to populate this picker.
+
+Use the project detail page to save explicit assignments. Removing an assignment immediately removes that designer/client's project access. Existing workspace roles never change through project forms. Owners always have access and do not need ProjectMember rows.
+
+Projects default to Active. Search runs on the server within the verified workspace and project permissions. It preserves the status filter and paginates 12 at a time; search/filter changes reset the page. URLs retain search/filter/page state. Archive preserves the project and all ProjectMember rows; use Archived to find it, and Restore project to return it to Active. Archived projects remain readable and assignments are locked until restore. There is no hard-delete UI or request-role DELETE grant on Project.
+
+Deploy application policy changes with `pnpm db:deploy`: migrations `20261017000400_project_management` and `20261017000500_project_insert_visibility` were applied to the existing development project on 17 October 2026. They add owner-only writes and scoped teammate-name access, retaining existing tenant isolation and browser-role denial. No Prisma schema change or Supabase Auth/Storage internal schema change is required.
+
+Checks: `pnpm check`, `pnpm test:integration`, `pnpm build`, `pnpm supabase:check`. Integration tests use only the dedicated local test database. Development Supabase connection timeouts can surface the project retry state; an error does not prove a previous write failed. Project creation retries reuse the same submission ID while the form is mounted; archive/restore are idempotent. Refreshing a creation form starts a new submission.
+
+Live Step 3 acceptance on 17 October 2026 used an agent-owned, confirmed temporary Auth account without sending email, a separate temporary workspace, and the user's existing development server. Browser creation/archive/restore/search/logout and desktop/mobile rendering passed. Database connection/transaction timeouts also exercised the error state; its Try again button uses this installed Next.js version's `retry()` prop to fetch fresh server content. All temporary application and Auth records were removed afterward. No user projects were created, archived or modified by this test.

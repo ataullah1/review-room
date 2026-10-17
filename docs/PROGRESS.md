@@ -5,7 +5,7 @@
 - [x] Step 0 Scope and screens — user confirmed UI renders and authorized Step 1; remaining manual coverage recorded below
 - [x] Step 1 Repository and foundation — local and hosted development setup verified on 17 October 2026
 - [x] Step 2 Identity and permissions — application tests, live immediate signup and active provider-hook enforcement verified on 17 October 2026
-- [ ] Step 3 Projects
+- [x] Step 3 Projects — permissions, automated checks and live browser flow verified on 17 October 2026
 - [ ] Step 4 Private upload
 - [ ] Step 5 Image comments
 - [ ] Step 6 Versions and approval
@@ -15,6 +15,20 @@
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
 
+## Step 3 — project foundation (17 October 2026)
+
+- Owner-only project creation with trimmed 2–150-character names, control-character rejection, atomic initial assignments, and a UUID submission key that prevents duplicate projects on concurrent retries.
+- Explicit assignment/revocation uses existing DESIGNER/CLIENT workspace memberships; OWNER is never assigned through this picker and retains access to every workspace project. No role changes, invitations, uploads or unrelated features were introduced.
+- Server-scoped case-insensitive name search, active/archived filters and 12-item pagination, stable date/ID ordering, scoped counts and bounded page inputs. Owners see every project in the selected workspace; designers/clients see only their assigned projects.
+- Owner-only archive/restore preserves project rows and assignments. Archived projects remain readable by authorized users, leave active listings, and cannot have assignments changed until restored. Repeated archive/restore preserves the first archive timestamp and creates no new rows.
+- Added responsive project cards, creation and people forms, useful empty/search/no-results states, pending/success/error feedback, loading and retry UI. Every server mutation re-verifies authentication, request origin, membership and nested project scope, then executes under the existing non-bypass RLS request role.
+- Applied additive migrations `20261017000400_project_management` and `20261017000500_project_insert_visibility` to the dedicated local test database and existing development Supabase. The second migration fixes INSERT RETURNING visibility by checking workspace ownership directly in the SELECT policy. Browser roles remain denied direct application-table access; hard-delete permission is not granted.
+- Checks passed: 51 unit/session tests, 29 real PostgreSQL integration tests, lint, typecheck, formatting, production build, live Supabase configuration checks and diff whitespace checks. Integration cases cover two workspaces, assigned/unassigned/outsider roles, direct RLS write denial, forged IDs, scoped names, atomic rejected assignments, concurrent creation, access revocation, pagination and archive preservation.
+- Live headless Chrome walkthrough passed on the existing development server: confirmed test-account login, empty state, create Server Action and detail redirect, archive, active exclusion, archived listing, restore, search/no-results, desktop at 1440px, mobile at 390px without horizontal overflow, logout and protected-route denial. Temporary Auth/profile/workspace/project/permit records were removed.
+- Hosted development database connection/transaction timeouts occurred during the walkthrough; retry recovery passed after correcting the new Next.js error boundary to use the version-documented `retry()` prop (re-fetches server content), rather than `reset()` (replays the existing render). Network timeouts are not claimed eliminated.
+- Production browser bundle scan: 15 JavaScript files checked; no database URL/password, server Supabase secret or signup limiter secret found.
+- Next: Step 4 private image upload. It has not been started.
+
 ## Google authentication extension — 17 October 2026
 
 - Added Google buttons to login/signup, server-started PKCE OAuth, HttpOnly five-minute one-use durable intent, verified callback and existing idempotent workspace/OWNER provisioning. Existing email/password flows and project RLS remain in place.
@@ -22,9 +36,9 @@
 - Applied additive migration `20261017000300_google_auth_hook` to the local test database and development Supabase, preserving the active hook and password-signup permit enforcement while accepting verified Google provider identities.
 - Verified 43 unit/session tests and 19 real PostgreSQL integration tests, lint, formatting, TypeScript, production build and live Supabase configuration checks. Live HTTP checks: both forms show Google, start returns 200 with HttpOnly intent/PKCE cookies, Supabase redirects to accounts.google.com, foreign Origin rejected 403, cancellation redirects to login.
 - Live Google provider is already enabled. No Dashboard setting was changed by the agent. Interactive Google consent/sign-in and callback allowlist require a browser walkthrough; exact configuration paths are in RUNBOOK.md.
-- Step 3 remains unstarted, as requested.
+- At the end of the Google extension, Step 3 had not started. Its subsequent completion is recorded above.
 
-## Current session — 17 October 2026, Step 2
+## Previous session — 17 October 2026, Step 2
 
 ### Final acceptance — 17 October 2026
 
