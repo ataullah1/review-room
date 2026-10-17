@@ -1544,7 +1544,7 @@ h1 > span {
 
 .auth-page {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: 100dvh;
 }
 .auth-intro {
@@ -1591,6 +1591,7 @@ h1 > span {
   justify-self: center;
   width: 100%;
   max-width: 470px;
+  min-width: 0;
   padding: 50px 32px;
 }
 .auth-card h1 {
@@ -1607,7 +1608,7 @@ h1 > span {
 .auth-card form {
   display: grid;
   gap: 19px;
-  margin-top: 30px;
+  margin-top: 0;
 }
 .auth-card label {
   display: grid;
@@ -1738,7 +1739,7 @@ h1 > span {
 }
 @media (max-width: 700px) {
   .auth-page {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .auth-intro {
     padding: 23px;
@@ -1778,4 +1779,85 @@ h1 > span {
     left: auto;
     right: 12px;
   }
+}
+
+.auth-card .auth-google-button {
+  display: grid;
+  grid-template-columns: 20px 1fr 20px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 28px;
+  padding: 12px 16px;
+  border: 1px solid #dfe5d8;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.auth-google-button:hover:not(:disabled) {
+  background: #f7f9f4;
+  border-color: #a9b99b;
+  box-shadow: 0 2px 6px #35432d0a;
+}
+.auth-google-button svg {
+  display: block;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 24px 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #e3e8dd;
+}
+.auth-card .auth-submit-button {
+  display: grid;
+  grid-template-columns: 16px 1fr 16px;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.auth-submit-button > span {
+  grid-column: 2;
+}
+.auth-submit-button > svg {
+  grid-column: 3;
+}
+.auth-card input {
+  min-height: 48px;
+  border-radius: 8px;
+}
+.auth-card button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+@media (max-width: 700px) {
+  .auth-page {
+    grid-template-rows: auto 1fr;
+  }
+  .auth-card {
+    align-self: start;
+  }
+}
+
+.auth-google-button:not(:focus-visible) {
+  outline: none;
 }

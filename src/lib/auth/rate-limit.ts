@@ -53,3 +53,19 @@ export async function reserveSignup(
 export async function discardSignupPermit(db: PrismaClient, token: string) {
   await db.signupPermit.deleteMany({ where: { tokenHash: sha256(token) } });
 }
+
+export async function consumeSignupPermit(
+  db: PrismaClient,
+  token: string,
+  scope: string,
+) {
+  if (!/^[a-f0-9]{64}$/.test(token)) return false;
+  const result = await db.signupPermit.deleteMany({
+    where: {
+      tokenHash: sha256(token),
+      emailHash: sha256(scope),
+      expiresAt: { gt: new Date() },
+    },
+  });
+  return result.count === 1;
+}

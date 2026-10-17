@@ -6,7 +6,7 @@ import { identityFromUser } from "@/lib/auth/user";
 import { requireSameOrigin } from "@/lib/auth/validation";
 import { signupNetworkHash } from "@/lib/auth/ip";
 import { reserveSignup, discardSignupPermit } from "@/lib/auth/rate-limit";
-import { bootstrapWorkspace } from "@/lib/data/bootstrap";
+import { bootstrapWithQuota } from "@/lib/data/onboarding";
 import { getDb } from "@/lib/server/db";
 
 export const runtime = "nodejs";
@@ -108,7 +108,8 @@ export async function POST(
             503,
           );
       },
-      bootstrap: (user) => bootstrapWorkspace(getDb(), user),
+      bootstrap: (user, reserved) =>
+        bootstrapWithQuota(getDb(), user, request.headers, reserved),
     });
     return NextResponse.json(result, { headers: privateHeaders });
   } catch (error) {

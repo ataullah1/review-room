@@ -23,7 +23,10 @@ export interface AuthDependencies {
   reserveSignup(email: string): Promise<string>;
   discardPermit(permit: string): Promise<void>;
   assertInstantSignup(): Promise<void>;
-  bootstrap(user: VerifiedIdentity): Promise<{ id: string }>;
+  bootstrap(
+    user: VerifiedIdentity,
+    quotaReserved: boolean,
+  ): Promise<{ id: string }>;
 }
 
 export async function authenticate(
@@ -82,7 +85,7 @@ export async function authenticate(
   // Always verify through the Auth server, never trust a cookie/getSession user.
   const user = await deps.provider.getUser();
   if (!user) throw new AuthFlowError("Please sign in to continue.", 401);
-  const workspace = await deps.bootstrap(user);
+  const workspace = await deps.bootstrap(user, operation === "signup");
   const next =
     input &&
     typeof input === "object" &&

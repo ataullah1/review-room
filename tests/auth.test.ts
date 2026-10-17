@@ -37,7 +37,7 @@ describe("authentication flow", () => {
       ...input,
       permit: "one-use-permit",
     });
-    expect(deps.bootstrap).toHaveBeenCalledWith(user);
+    expect(deps.bootstrap).toHaveBeenCalledWith(user, true);
     expect(deps.discardPermit).toHaveBeenCalledWith("one-use-permit");
   });
   it("does not create an account or send email when confirmation remains on", async () => {

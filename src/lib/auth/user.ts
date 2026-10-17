@@ -7,10 +7,16 @@ export function identityFromUser(user: User) {
   return {
     id: user.id,
     email: user.email,
-    displayName:
-      typeof user.user_metadata?.display_name === "string"
-        ? user.user_metadata.display_name.slice(0, 80)
-        : undefined,
+    displayName: [
+      user.user_metadata?.display_name,
+      user.user_metadata?.full_name,
+      user.user_metadata?.name,
+    ]
+      .find(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      )
+      ?.slice(0, 80),
   };
 }
 export async function requireUser() {

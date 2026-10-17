@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { assertLocalDatabase } from "../../prisma/local-safety";
@@ -7,6 +7,8 @@ import {
   fixtureIds as ids,
   seedDevelopmentDatabase,
 } from "../../prisma/seed-data";
+import { bootstrapWithQuota } from "../../src/lib/data/onboarding";
+import { signupNetworkHash } from "../../src/lib/auth/ip";
 import { bootstrapWorkspace } from "../../src/lib/data/bootstrap";
 import { withUserDatabase } from "../../src/lib/data/context";
 import {
@@ -15,7 +17,11 @@ import {
   requireProjectRole,
   renameWorkspace,
 } from "../../src/lib/data/permissions";
-import { reserveSignup, sha256 } from "../../src/lib/auth/rate-limit";
+import {
+  reserveSignup,
+  sha256,
+  consumeSignupPermit,
+} from "../../src/lib/auth/rate-limit";
 
 const connectionString = assertLocalDatabase(
   process.env.TEST_DATABASE_URL,
@@ -28,6 +34,7 @@ const makeDb = () =>
 const db = makeDb();
 const secondProcess = makeDb();
 const newUser = randomUUID();
+const oauthUsers = [randomUUID(), randomUUID()];
 const extraProject = randomUUID();
 const rateKeys: string[] = [];
 const tokens: string[] = [];
@@ -43,8 +50,12 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await db.project.deleteMany({ where: { id: extraProject } });
-  await db.workspace.deleteMany({ where: { createdById: newUser } });
-  await db.userProfile.deleteMany({ where: { id: newUser } });
+  await db.workspace.deleteMany({
+    where: { createdById: { in: [newUser, ...oauthUsers] } },
+  });
+  await db.userProfile.deleteMany({
+    where: { id: { in: [newUser, ...oauthUsers] } },
+  });
   await db.signupRateBucket.deleteMany({
     where: {
       keyHash: {
@@ -286,5 +297,100 @@ describe("durable signup limiter and one-use permit", () => {
     await expect(
       withUserDatabase(db, ids.owner, (tx) => tx.signupRateBucket.findMany()),
     ).rejects.toThrow();
+  });
+});
+
+describe("Google onboarding safeguards", () => {
+  it("allows only trusted verified Google creation, preserving email permit checks", async () => {
+    const hook = async (user: object) =>
+      (
+        await db.$queryRaw<
+          Array<{ result: { error?: object } }>
+        >`SELECT app.before_user_created(${JSON.stringify({ user })}::jsonb) AS result`
+      )[0].result;
+    expect(
+      await hook({
+        email: "google@example.test",
+        app_metadata: { provider: "google" },
+        user_metadata: { email_verified: true },
+      }),
+    ).toEqual({});
+    for (const user of [
+      {
+        email: "test@example.test",
+        app_metadata: { provider: "email" },
+        user_metadata: { provider: "google", email_verified: true },
+      },
+      {
+        email: "test@example.test",
+        app_metadata: { provider: "google" },
+        user_metadata: { email_verified: false },
+      },
+      {
+        app_metadata: { provider: "google" },
+        user_metadata: { email_verified: true },
+      },
+    ])
+      expect(await hook(user)).toHaveProperty("error.http_code", 403);
+  });
+  it("binds OAuth intent to scope, expiration and one use across clients", async () => {
+    const key = sha256(randomUUID());
+    rateKeys.push(key);
+    const token = await reserveSignup(db, key, "oauth:google");
+    tokens.push(token);
+    expect(await consumeSignupPermit(db, token, "different-scope")).toBe(false);
+    const results = await Promise.all([
+      consumeSignupPermit(db, token, "oauth:google"),
+      consumeSignupPermit(secondProcess, token, "oauth:google"),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    const expired = await reserveSignup(db, key, "oauth:google");
+    tokens.push(expired);
+    await db.signupPermit.update({
+      where: { tokenHash: sha256(expired) },
+      data: { expiresAt: new Date(0) },
+    });
+    expect(await consumeSignupPermit(db, expired, "oauth:google")).toBe(false);
+  });
+});
+
+describe("server onboarding quota for direct OAuth sessions", () => {
+  it("charges new users once, allows existing profiles, and blocks provisioning at quota", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv(
+      "SIGNUP_RATE_LIMIT_SECRET",
+      "integration-only-secret-with-at-least-32-chars",
+    );
+    const headers = new Headers({ "x-vercel-forwarded-for": "192.0.2.48" });
+    const key = signupNetworkHash(headers);
+    rateKeys.push(key);
+    try {
+      const identity = { id: oauthUsers[0], displayName: "Google owner" };
+      const first = await bootstrapWithQuota(db, identity, headers);
+      const retry = await bootstrapWithQuota(secondProcess, identity, headers);
+      expect(retry.id).toBe(first.id);
+      expect(
+        (
+          await db.signupRateBucket.findUniqueOrThrow({
+            where: { keyHash: sha256(`hour:${key}`) },
+          })
+        ).attempts,
+      ).toBe(1);
+      await db.signupRateBucket.update({
+        where: { keyHash: sha256(`hour:${key}`) },
+        data: { attempts: 5 },
+      });
+      await expect(
+        bootstrapWithQuota(db, { id: oauthUsers[1] }, headers),
+      ).rejects.toMatchObject({ status: 429 });
+      expect(
+        await db.userProfile.findUnique({ where: { id: oauthUsers[1] } }),
+      ).toBeNull();
+      expect((await bootstrapWithQuota(db, identity, headers)).id).toBe(
+        first.id,
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

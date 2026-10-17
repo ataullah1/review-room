@@ -122,3 +122,21 @@ References: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/cre
 ### Final live Step 2 acceptance
 
 On 17 October 2026 the user enabled the Before User Created Postgres hook. A real missing-permit signup returned HTTP 403 with no account/session; app signup with a permitted request returned HTTP 200 with immediate sign-in and profile/workspace/OWNER bootstrap. Protected access, duplicate-safe bootstrap retries and password login/logout passed with the hook active. The test account and its application records were deleted. `pnpm supabase:check` passed; its read-only hook-installation check is supplemented by this actual provider-enforcement test. No Step 2 Dashboard setting remains pending for the current development project.
+
+### Google sign-in (Step 2 extension)
+
+Both `/login` and `/signup` offer **Continue with Google**. The same-origin POST `/auth/google` checks the live provider setting, reserves the durable signup quota, starts Supabase PKCE, and sets a five-minute HttpOnly intent cookie. `/auth/callback` consumes the database-backed intent exactly once, exchanges the code, verifies the Google-linked identity through `getUser`, then performs the existing idempotent profile/workspace/OWNER bootstrap. Provider cancellation and invalid callbacks return a static login error. No Google access or refresh tokens are requested for offline API use.
+
+Migration `20261017000300_google_auth_hook` preserves the enabled `app.before_user_created` function and its grants. It allows Supabase-assigned Google provider identities with a verified email; password signups still require the one-use email-bound permit. Do not disable the hook. Google Auth account creation itself relies on Google/Supabase protections; the durable application quota limits OAuth starts and new application workspace provisioning. Directly obtained OAuth sessions cannot bypass the latter through login/bootstrap. Existing provisioned users can retry bootstrap without consuming signup quota. OAuth starts currently share the five/hour and twenty/day signup allowance, including returning Google users.
+
+Provider setup, if configuring another environment:
+
+1. Google Cloud Console → Google Auth Platform → Branding, Audience and Data Access: configure the consent screen, allowed test users while in Testing, and only `openid`, email and profile scopes.
+2. Google Auth Platform → Clients → Create client → Web application. Authorized JavaScript origin: `http://localhost:3000`. Authorized redirect URI for this hosted development project: `https://pwzwrknnzkdagfcjnqkr.supabase.co/auth/v1/callback`.
+3. Supabase Dashboard → Authentication → Sign In / Providers → Google: enable the provider, enter the Google Client ID and Client Secret, Save. The secret belongs here, never in browser environment variables or chat.
+4. Supabase Dashboard → Authentication → URL Configuration → Redirect URLs: allow `http://localhost:3000/auth/callback`; set Site URL to `http://localhost:3000`. Add the actual HTTPS production origin and callback when deploying. The app derives its callback from `NEXT_PUBLIC_APP_URL`, not request input.
+5. Keep Authentication → Hooks → Before User Created pointing to `pg-functions://postgres/app/before_user_created`.
+
+On 17 October 2026 the public settings endpoint reported Google enabled and email confirmation off. App OAuth initiation returned 200 with HttpOnly intent and PKCE cookies, and Supabase authorization returned 302 to `accounts.google.com`. The new hook migration was applied to development Supabase. No Google Dashboard setting was changed by the agent. The callback allowlist, Google consent configuration, and completed interactive Google sign-in were not independently verified; finish one browser sign-in to accept the live flow.
+
+Reference: [Supabase Google OAuth setup and SSR callback](https://supabase.com/docs/guides/auth/social-login/auth-google).

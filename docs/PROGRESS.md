@@ -15,6 +15,15 @@
 - [ ] Step 10 Verification and polish
 - [ ] Step 11 Deployment and portfolio
 
+## Google authentication extension — 17 October 2026
+
+- Added Google buttons to login/signup, server-started PKCE OAuth, HttpOnly five-minute one-use durable intent, verified callback and existing idempotent workspace/OWNER provisioning. Existing email/password flows and project RLS remain in place.
+- Added an onboarding quota guard to all HTTP bootstrap entry points so a directly obtained OAuth session cannot bypass the workspace limiter. Google Auth account creation relies on Google/Supabase safeguards; application quota protects OAuth starts and workspace provisioning.
+- Applied additive migration `20261017000300_google_auth_hook` to the local test database and development Supabase, preserving the active hook and password-signup permit enforcement while accepting verified Google provider identities.
+- Verified 43 unit/session tests and 19 real PostgreSQL integration tests, lint, formatting, TypeScript, production build and live Supabase configuration checks. Live HTTP checks: both forms show Google, start returns 200 with HttpOnly intent/PKCE cookies, Supabase redirects to accounts.google.com, foreign Origin rejected 403, cancellation redirects to login.
+- Live Google provider is already enabled. No Dashboard setting was changed by the agent. Interactive Google consent/sign-in and callback allowlist require a browser walkthrough; exact configuration paths are in RUNBOOK.md.
+- Step 3 remains unstarted, as requested.
+
 ## Current session — 17 October 2026, Step 2
 
 ### Final acceptance — 17 October 2026
