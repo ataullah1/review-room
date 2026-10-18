@@ -4,7 +4,7 @@ Image feedback, revisions and client decisions in one workspace.
 
 [Live app](https://rreviewroom.vercel.app) · [Try the demo](https://rreviewroom.vercel.app/demo) · [Architecture](docs/ARCHITECTURE.md)
 
-![Review Room homepage with its interactive design-review preview](docs/screenshots/01-landing.webp)
+![Review Room project overview](docs/screenshots/Review-Room.webp)
 
 Review Room is an independent portfolio project for reviewing creative work. A comment belongs to a detail in an image, and a decision belongs to a particular version. That keeps “could you change this?” attached to the work it refers to.
 
