@@ -15,6 +15,12 @@
 - [x] Step 10 Verification and polish — automated/browser matrix complete on 18 October 2026; physical-phone and interactive Google checks remain manual
 - [x] Step 11 Release preparation and portfolio draft — code/local checks complete; production Dashboard configuration, redeploy and live acceptance remain manual
 
+## Vercel missing Prisma Client build fix (18 October 2026)
+
+- The owner supplied a failed Vercel build log for commit `7ff93ab`: cached installation reported dependencies already up to date without a Prisma generation step, then Turbopack could not resolve `@/generated/prisma/client`. Earlier local builds had an existing ignored generated client and did not exercise this condition.
+- Changed `pnpm build` to run `prisma generate && next build`, retaining `postinstall` and the existing Vercel `pnpm build` command. No migration, schema, environment variable or generated-client commit is required.
+- Temporarily moved the existing generated client outside the repository, then ran the Production-mode build. It recreated the client and completed compilation, TypeScript and all static pages successfully. Formatting and diff checks passed. No database migration, production fixture, staging, commit, push or deployment was performed.
+
 ## Brand, favicon and search identity (18 October 2026)
 
 - Added an original image-frame/feedback-pin mark and shared Manrope wordmark. Applied the lockup to landing/header/footer, login/signup, workspace header, demo and invitation/share entry/error screens, keeping existing navigation and authorization behavior.

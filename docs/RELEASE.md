@@ -60,7 +60,7 @@ Supabase → Authentication → Sign In / Providers → **Google**: the same Goo
 
 ## 4. Build, migrations and release order
 
-The GitHub repository is already connected to Vercel; do not create a second project/domain. `vercel.json` declares Next.js, `pnpm build`, Tokyo `hnd1` (matching the current database's ap-northeast-1 region) and the daily cleanup schedule. Confirm the production branch under **Vercel → Settings → Environments → Production** / the project's Git settings. Keep lockfile-based pnpm installation and the existing Prisma generate postinstall. No migration is attached to the build command.
+The GitHub repository is already connected to Vercel; do not create a second project/domain. `vercel.json` declares Next.js, `pnpm build`, Tokyo `hnd1` (matching the current database's ap-northeast-1 region) and the daily cleanup schedule. Confirm the production branch under **Vercel → Settings → Environments → Production** / the project's Git settings. Keep lockfile-based pnpm installation and the existing Prisma generate postinstall. `pnpm build` explicitly runs `prisma generate && next build` so the ignored `src/generated/prisma` client is recreated even when a cached install skips lifecycle scripts. Generation does not connect to the database. No migration is attached to the build command.
 
 For this release there is **no new database migration**. The existing 13 migrations were applied during earlier steps. Their order is fixed by the directories under `prisma/migrations`: foundation → identity/RLS → Google hook → project management/insert visibility → private assets → comments → version decisions → invitations/shares → invitation role/confirmed identity fixes → activity → guest demo. Never edit previously applied SQL to retrofit production.
 
