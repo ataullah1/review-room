@@ -1,4 +1,5 @@
 "use client";
+import { Brand } from "@/components/brand";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -154,10 +155,7 @@ export default function ReviewRoom() {
     <div className="shell">
       <aside className="sidebar">
         <Link className="brand" href="/" aria-label="Review Room home">
-          <span className="brandmark">
-            <MessageCircle size={20} />
-          </span>
-          review room<span className="branddot">.</span>
+          <Brand />
         </Link>
         <button
           className="workspace"

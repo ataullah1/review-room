@@ -1,4 +1,5 @@
 "use client";
+import { Brand } from "@/components/brand";
 import { useEffect, useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 export function LinkEntry({ kind }: { kind: "invite" | "share" }) {
@@ -38,7 +39,9 @@ export function LinkEntry({ kind }: { kind: "invite" | "share" }) {
   }, [open]);
   return (
     <main className="capability-entry">
-      <span className="capability-brand">review room.</span>
+      <span className="capability-brand">
+        <Brand />
+      </span>
       <h1>
         {kind === "invite" ? "A place on the project." : "A closer look."}
       </h1>

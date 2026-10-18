@@ -1,3 +1,4 @@
+import { Brand } from "@/components/brand";
 import Link from "next/link";
 import Image from "next/image";
 import { demoAssets } from "@/features/demo/catalog";
@@ -11,9 +12,20 @@ export const metadata: Metadata = {
   description:
     "An image review workspace with pinned feedback, version comparison and client approvals. Explore the interactive demo without signing in.",
   alternates: { canonical: productionOrigin },
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
   robots: { index: isProductionDeployment(), follow: isProductionDeployment() },
   openGraph: {
     type: "website",
+    images: [
+      {
+        url: "/brand/social-preview.png",
+        width: 1200,
+        height: 630,
+        alt: "Review Room — a little feedback, a better result. Image pins, version comparison and client approvals.",
+      },
+    ],
     siteName: "Review Room",
     url: productionOrigin,
     title: "Review Room — Visual Review and Client Approval",
@@ -21,17 +33,39 @@ export const metadata: Metadata = {
       "Pinned feedback, version comparison and client approvals for creative projects.",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
+    images: [
+      {
+        url: "/brand/social-preview.png",
+        alt: "Review Room visual review and client approval workspace",
+      },
+    ],
     title: "Review Room",
     description: "Visual review and client approval for creative projects.",
   },
 };
+const siteIdentity = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": `${productionOrigin}/#website`,
+  name: "Review Room",
+  url: productionOrigin,
+  inLanguage: "en",
+  description:
+    "An image review workspace with pinned feedback, version comparison and client approvals.",
+};
 export default function Page() {
   return (
     <main className="landing">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(siteIdentity).replace(/</g, "\\u003c"),
+        }}
+      />
       <header>
         <Link className="capability-brand" href="/">
-          review room.
+          <Brand />
         </Link>
         <Link href="/login">Sign in →</Link>
       </header>
@@ -97,7 +131,10 @@ export default function Page() {
         </div>
       </section>
       <footer>
-        review room. · A little feedback. A better result.
+        <div className="landing-signoff">
+          <Brand compact />
+          <p>A little feedback. A better result.</p>
+        </div>
         <Link href="/signup">Create a workspace →</Link>
       </footer>
     </main>

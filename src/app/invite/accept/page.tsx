@@ -1,3 +1,4 @@
+import { Brand } from "@/components/brand";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { requireUser } from "@/lib/auth/user";
@@ -30,6 +31,9 @@ export default async function Page() {
   } catch (error) {
     return (
       <main className="capability-entry">
+        <span className="capability-brand">
+          <Brand />
+        </span>
         <h1>Invitation unavailable</h1>
         <p>
           {error instanceof AccessError
@@ -41,7 +45,9 @@ export default async function Page() {
   }
   return (
     <main className="capability-entry">
-      <span className="capability-brand">review room.</span>
+      <span className="capability-brand">
+        <Brand />
+      </span>
       <h1>You’re invited.</h1>
       <h2>{preview.projectName}</h2>
       <p>

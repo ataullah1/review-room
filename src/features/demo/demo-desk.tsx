@@ -1,4 +1,5 @@
 "use client";
+import { Brand } from "@/components/brand";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -227,7 +228,9 @@ export function DemoDesk() {
   if (!snapshot)
     return (
       <main className="capability-entry">
-        <span className="capability-brand">review room.</span>
+        <span className="capability-brand">
+          <Brand />
+        </span>
         <h1>Your own little review room.</h1>
         <p>{error || "Preparing three sample designs for your demo…"}</p>
         {error && (
@@ -242,7 +245,7 @@ export function DemoDesk() {
     <main className="demo-desk">
       <header className="demo-topbar">
         <Link className="capability-brand" href="/">
-          review room.
+          <Brand />
         </Link>
         <span className="demo-badge">Isolated demo · sample data</span>
         <Link href="/signup">Create your workspace →</Link>

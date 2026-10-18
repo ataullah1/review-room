@@ -1,3 +1,4 @@
+import { Brand } from "@/components/brand";
 import { cookies, headers } from "next/headers";
 import { getDb } from "@/lib/server/db";
 import { AccessError } from "@/lib/auth/errors";
@@ -33,6 +34,9 @@ export default async function Page({
   } catch (error) {
     return (
       <main className="capability-entry">
+        <span className="capability-brand">
+          <Brand />
+        </span>
         <h1>Share unavailable</h1>
         <p>
           {error instanceof AccessError
@@ -47,7 +51,9 @@ export default async function Page({
   return (
     <main className="shared-review">
       <header>
-        <span className="capability-brand">review room.</span>
+        <span className="capability-brand">
+          <Brand />
+        </span>
         <span>Shared for viewing · read only</span>
       </header>
       <div className="image-review-heading">

@@ -15,6 +15,14 @@
 - [x] Step 10 Verification and polish — automated/browser matrix complete on 18 October 2026; physical-phone and interactive Google checks remain manual
 - [x] Step 11 Release preparation and portfolio draft — code/local checks complete; production Dashboard configuration, redeploy and live acceptance remain manual
 
+## Brand, favicon and search identity (18 October 2026)
+
+- Added an original image-frame/feedback-pin mark and shared Manrope wordmark. Applied the lockup to landing/header/footer, login/signup, workspace header, demo and invitation/share entry/error screens, keeping existing navigation and authorization behavior.
+- Added a scalable SVG favicon, multi-size ICO, opaque Apple/home-screen PNG icons, browser-mode manifest and original 1200 × 630 social card using fictional sample artwork. `pnpm brand:generate` regenerates these locally with existing fonts/dependencies and optional Chrome; the normal build/runtime needs no browser or external font/image generation service.
+- Connected large Open Graph/Twitter previews, icon discovery, application name/theme and homepage WebSite JSON-LD. Preserved production-only indexing, canonical URL, root-only sitemap and private-route exclusions. Added optional public `GOOGLE_SITE_VERIFICATION` to `.env.example` and exact owner-operated Search Console steps in [RELEASE.md](RELEASE.md). Actual local secrets were not changed.
+- Validation: production build and lint passed; all 17 anonymous release checks passed against a local Production-mode build. Headless Chrome verified branding/fonts and no horizontal overflow on landing, login, signup, demo, share and invitation entry at 360/390/768/1440px. Desktop/mobile screenshots and the social card/small icons were visually inspected. Demo rendering used intercepted seeded sample data; its session POST and all other non-GET requests were blocked from the backend. No production fixture, Auth mutation or database migration was needed.
+- No staging, commit, push or deployment. No claim of private authenticated browser acceptance in this branding pass, Search Console ownership verification, sitemap submission or live Google indexing. Earlier records that deferred branding are historical; this entry completes that deferred code/artwork scope. The user will commit and deploy.
+
 ## Step 11 — release preparation for the existing Vercel domain (18 October 2026)
 
 - The user supplied `https://rreviewroom.vercel.app` and confirmed that the formerly developmental Supabase project `pwzwrknnzkdagfcjnqkr` now backs the live site. Treat it as production. No hosted fixture writes, migration, cleanup, signup, invitation or Auth user creation was performed in this step. No production backup/restore was executed. Earlier development-only acceptance records remain historical.

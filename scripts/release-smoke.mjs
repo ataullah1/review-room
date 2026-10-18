@@ -43,6 +43,56 @@ await check(
     !/name="robots" content="[^"]*noindex/.test(b),
 );
 await check(
+  "social preview, icons and WebSite identity are discoverable",
+  "/",
+  (r, b) => {
+    const match = b.match(
+      /<script[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/s,
+    );
+    if (!match) return false;
+    const site = JSON.parse(match[1]);
+    return (
+      r.status === 200 &&
+      site["@type"] === "WebSite" &&
+      site.name === "Review Room" &&
+      site.url === expected &&
+      b.includes(
+        `property="og:image" content="${expected}/brand/social-preview.png"`,
+      ) &&
+      b.includes('name="twitter:card" content="summary_large_image"') &&
+      b.includes('rel="apple-touch-icon"') &&
+      b.includes('href="/favicon.ico') &&
+      b.includes('href="/site.webmanifest"')
+    );
+  },
+);
+for (const path of [
+  "/favicon.ico",
+  "/icon.svg",
+  "/apple-icon.png",
+  "/brand/social-preview.png",
+])
+  await check(
+    `${path} is a public image`,
+    path,
+    (r) =>
+      r.status === 200 && r.headers.get("content-type")?.startsWith("image/"),
+  );
+await check(
+  "home-screen identity uses the Review Room icons",
+  "/site.webmanifest",
+  (r, b) => {
+    const manifest = JSON.parse(b);
+    return (
+      r.status === 200 &&
+      manifest.name === "Review Room" &&
+      manifest.display === "browser" &&
+      manifest.icons?.length === 2 &&
+      manifest.icons.every((i) => i.src.startsWith("/brand/icon-"))
+    );
+  },
+);
+await check(
   "robots exclude private routes",
   "/robots.txt",
   (r, b) =>

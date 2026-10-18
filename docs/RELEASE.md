@@ -68,10 +68,24 @@ For this release there is **no new database migration**. The existing 13 migrati
 2. Run the local checks appropriate to this release. `pnpm db:local:start` then `pnpm db:rehearse` creates a uniquely named temporary database on the guarded loopback cluster, applies all 13 migrations with no seed, verifies 17 application tables/RLS, and drops only that new database. It does not reset existing databases. This rehearsal passed; a separate hosted staging rehearsal has not been performed.
 3. If inspecting production migration state, load its session/direct `DIRECT_URL` into a trusted operator environment and run `pnpm exec prisma migrate status`. For a future pending additive migration, rehearse/backup/review first, then explicitly run `pnpm db:deploy` once. Do not run `migrate dev`, `migrate reset`, `db push` or development seeds against production. Do not run schema scripts blindly against the existing live project.
 4. The user commits and pushes the reviewed change to the connected production branch. Git integration then creates the deployment. If only environment variables changed, use **Vercel → Deployments → the Production deployment → ⋯ → Redeploy** after saving. Build for Production rather than promoting an artifact built with Preview credentials/noindex metadata.
-5. Run `pnpm release:smoke` against the live domain. It sends anonymous GETs only: landing/canonical/demo link, robots, sitemap, noindex/no-referrer on capability/Auth pages, anonymous workspace redirect, denied demo state and denied maintenance. It creates no guest session or Auth/application fixture.
+5. Run `pnpm release:smoke` against the live domain. Its 17 anonymous GET checks cover landing/canonical/demo link, social metadata and WebSite identity, public icons/social image/manifest, robots, sitemap, noindex/no-referrer on capability/Auth pages, anonymous workspace redirect, denied demo state and denied maintenance. It creates no guest session or Auth/application fixture.
 6. Complete the small authenticated/real-device checklist below. If a check fails, stop calling the release verified and inspect sanitized logs/configuration before adding features.
 
 [Vercel function regions](https://vercel.com/docs/regions). Dashboard region/build/environment settings still need verification; a committed configuration file alone does not prove the active deployment uses it.
+
+### Brand and search identity
+
+The release includes an original shared frame/pin mark, SVG/ICO favicon, Apple/home-screen icons and a static 1200 × 630 social card. See [asset sources and regeneration](../public/brand/README.md). Home metadata includes large Open Graph/Twitter previews and WebSite JSON-LD with the actual name and canonical URL. Existing production-only indexing and private-route exclusions remain in place. The manifest supplies identity in browser mode; it does not enable offline operation.
+
+After the new code is deployed, the owner can complete Google Search Console setup:
+
+1. Open [Search Console](https://search.google.com/search-console), choose **Add property → URL prefix**, and enter `https://rreviewroom.vercel.app/`.
+2. Under ownership verification choose **HTML tag**. Copy only the tag's `content` token into Vercel → project → Settings → Environment Variables → **GOOGLE_SITE_VERIFICATION**, scoped to **Production**. This public token is optional and unrelated to Google login.
+3. Save and redeploy Production so the homepage contains the verification tag. Return to Search Console and select **Verify**. Keep the token configured for continued verification.
+4. In the verified property, open **Sitemaps** and submit `https://rreviewroom.vercel.app/sitemap.xml`.
+5. Open **URL inspection**, inspect the homepage, use **Test live URL**, then **Request indexing** if eligible. Keep private/Auth/demo URLs out of submissions.
+
+No Search Console account access, ownership verification, sitemap submission or Google indexing is claimed. WebSite markup indicates a preferred site name; Google's selection and indexing remain automated. It can be syntax-checked with Schema Markup Validator; Google's Rich Results Test does not support site names. [Ownership verification](https://support.google.com/webmasters/answer/9008080), [site-name guidance](https://developers.google.com/search/docs/appearance/site-names).
 
 ## 5. Cleanup, hosting and logs
 

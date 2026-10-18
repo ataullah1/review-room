@@ -1,0 +1,41 @@
+/* Shared lockup. Keep the mark's geometry and the wordmark's spacing together. */
+.rr-brand {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  gap: 10px;
+  color: #25342d;
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+  white-space: nowrap;
+}
+.rr-brand__mark {
+  display: block;
+  flex: 0 0 auto;
+}
+.rr-brand__dot {
+  color: #59734d;
+}
+.rr-brand--compact {
+  gap: 8px;
+  font-size: 19px;
+  letter-spacing: -0.85px;
+}
+.landing-signoff > p {
+  margin: 10px 0 0;
+  color: #657267;
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .demo-topbar .rr-brand {
+    gap: 8px;
+    font-size: 19px;
+  }
+  .demo-topbar .rr-brand__mark {
+    width: 30px;
+    height: 30px;
+  }
+}

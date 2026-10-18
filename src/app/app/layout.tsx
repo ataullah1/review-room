@@ -1,3 +1,4 @@
+import { Brand } from "@/components/brand";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/user";
@@ -20,7 +21,7 @@ export default async function PrivateLayout({
     <div className="private-app">
       <header>
         <Link href="/app" className="brand">
-          review room.
+          <Brand />
         </Link>
         <SessionButton />
       </header>

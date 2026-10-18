@@ -1,7 +1,8 @@
 "use client";
+import { Brand } from "@/components/brand";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, MessageCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function AuthForm({
@@ -69,10 +70,7 @@ export function AuthForm({
     <div className="auth-page">
       <section className="auth-intro">
         <Link className="brand" href="/">
-          <span className="brandmark">
-            <MessageCircle size={20} />
-          </span>
-          review room<span className="branddot">.</span>
+          <Brand />
         </Link>
         <div>
           <span className="eyebrow">LESS BACK-AND-FORTH. BETTER WORK.</span>
