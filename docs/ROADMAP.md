@@ -10,12 +10,12 @@ Md Ataullah এর জন্য ধাপে ধাপে implementation guide
 ## কী বানাবেন
 Creative agency ও client এর জন্য একটি image review application। Designer design upload করবে; client ছবির নির্দিষ্ট জায়গায় comment করবে; নতুন version তুলনা করে approve বা changes চাইবে। English product interface এবং প্রস্তুত demo থাকবে, যাতে বিদেশি client সরাসরি ব্যবহার করে কাজ বুঝতে পারেন।
 
-## প্রথম version এর সীমানা
+## প্রথম version এর সীমানা 
 - Image review only: JPG, PNG এবং static WebP।
 - Workspace, assigned project access, private upload, pinned comment এবং replies।
 - Version history, side by side comparison এবং version অনুযায়ী approval।
 - Project invitation, expiring read only review link এবং activity feed।
-- Resettable demo, responsive UI, গুরুত্বপূর্ণ tests এবং live deployment।
+- Resettable demo, responsive UI, গুরুত্বপূর্ণ tests এবং live deploym
 
 ## এখন বানাবেন না
 Video বা PDF annotation, live website capture, unrestricted iframe, AI summary, subscription billing, custom domains, mobile app এবং realtime multiplayer cursor পরের version এর জন্য রাখুন। এগুলো portfolio launch আটকাবে না।
