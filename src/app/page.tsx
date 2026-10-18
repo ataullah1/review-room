@@ -285,8 +285,8 @@ export default function Page() {
                   <Image
                     src={demoAssets[0].versions[0].src}
                     alt="Original Forma brand identity sample"
-                    width={1200}
-                    height={800}
+                    width={demoAssets[0].versions[0].width}
+                    height={demoAssets[0].versions[0].height}
                     unoptimized
                   />
                   <span className={styles.staticPin} aria-hidden="true">
@@ -296,7 +296,10 @@ export default function Page() {
               </div>
               <figcaption className={styles.floatingComment}>
                 <span>PINNED FEEDBACK · SAMPLE CLIENT</span>
-                <p>“Could the wordmark have a little more breathing room?”</p>
+                <p>
+                  “Please make the wordmark larger and give the tagline more
+                  breathing room.”
+                </p>
               </figcaption>
             </figure>
           </div>
@@ -328,7 +331,7 @@ export default function Page() {
                   />
                   <p>
                     {version.number === 2
-                      ? "A little more breathing room."
+                      ? "Larger type. Clearer details."
                       : "The conversation stays here."}
                   </p>
                 </div>

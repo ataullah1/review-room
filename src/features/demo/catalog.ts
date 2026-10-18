@@ -4,8 +4,8 @@ export const demoAssets = [
     title: "Forma / identity",
     category: "Brand direction",
     versions: [
-      { number: 1, width: 1200, height: 800, src: "/demo/identity-v1.svg" },
-      { number: 2, width: 1200, height: 800, src: "/demo/identity-v2.svg" },
+      { number: 1, width: 1448, height: 1086, src: "/demo/identity-v1.webp" },
+      { number: 2, width: 1448, height: 1086, src: "/demo/identity-v2.webp" },
     ],
   },
   {
@@ -13,17 +13,17 @@ export const demoAssets = [
     title: "A slower kind of Sunday",
     category: "Editorial campaign",
     versions: [
-      { number: 1, width: 800, height: 1100, src: "/demo/journal-v1.svg" },
-      { number: 2, width: 800, height: 1100, src: "/demo/journal-v2.svg" },
+      { number: 1, width: 1536, height: 1024, src: "/demo/journal-v1.webp" },
+      { number: 2, width: 1086, height: 1448, src: "/demo/journal-v2.webp" },
     ],
   },
   {
     id: "packaging",
-    title: "Good things take root",
+    title: "Forma / almond granola",
     category: "Packaging concept",
     versions: [
-      { number: 1, width: 1000, height: 1000, src: "/demo/packaging-v1.svg" },
-      { number: 2, width: 1000, height: 1000, src: "/demo/packaging-v2.svg" },
+      { number: 1, width: 1448, height: 1086, src: "/demo/packaging-v1.webp" },
+      { number: 2, width: 1448, height: 1086, src: "/demo/packaging-v2.webp" },
     ],
   },
 ] as const;

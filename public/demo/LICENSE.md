@@ -1,3 +1,5 @@
-Review Room original demo artwork
+Review Room demo artwork
 
-All six SVG designs in this directory were created specifically for this project using original vector shapes and system-font text. They contain fictional sample concepts and no private client work, stock photos or third-party image assets. Copyright belongs to the project authors; redistribution follows the repository LICENSE.
+The six WebP images in this directory were supplied by the project owner for the fictional Forma identity, Sunday journal and almond-granola packaging demo. Each concept has an original and revised version. They replace the earlier code-drawn SVG samples.
+
+These are public demonstration assets, not customer uploads. This note records their source; it does not assert a third-party licence or exclusive copyright ownership.

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
+import sharp from "sharp";
 import {
   signDemoCookie,
   readDemoCookie,
@@ -16,6 +17,27 @@ const env = {
   },
   now = 1800000000000;
 describe("isolated demo contracts", () => {
+  it("matches artwork dimensions and the agreed historical feedback counts", async () => {
+    const seed = seededDemo();
+    for (const [index, asset] of demoAssets.entries()) {
+      expect(
+        seed.comments.filter(
+          (comment) =>
+            comment.assetId === asset.id &&
+            comment.version === 1 &&
+            !comment.parentId,
+        ),
+      ).toHaveLength([3, 2, 3][index]);
+      for (const version of asset.versions) {
+        const metadata = await sharp(`public${version.src}`).metadata();
+        expect([metadata.width, metadata.height]).toEqual([
+          version.width,
+          version.height,
+        ]);
+        expect(metadata.format).toBe("webp");
+      }
+    }
+  });
   it("verifies a signed guest cookie and rejects tampering or expiration", () => {
     const a = newDemoIdentity(),
       cookie = signDemoCookie(a.id, a.token, now + 86400000, env);

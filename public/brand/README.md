@@ -19,7 +19,7 @@ Generated assets:
 - `src/app/favicon.ico`: 16, 32, 48 and 64px entries.
 - `src/app/apple-icon.png`: opaque 180px Apple icon.
 - `icon-64.png`, `icon-192.png`, `icon-512.png`: opaque PNG exports.
-- `social-preview.png`: 1200 × 630px Open Graph/Twitter card using the original fictional Forma sample artwork from `public/demo/identity-v2.svg`.
+- `social-preview.png`: 1200 × 630px Open Graph/Twitter card using the owner-supplied fictional Forma sample artwork from `public/demo/identity-v2.webp`.
 
 Run `pnpm brand:generate` from the repository root after editing the source. This optional command needs local Chrome (default macOS path; override with `CHROME_BIN`) and existing project dependencies. It renders only local artwork/fonts in a temporary browser profile, closes that browser and removes its temporary files. It does not read application credentials or contact a database. Generated images are checked in; build/runtime do not need Chrome, font downloads or image generation.
 

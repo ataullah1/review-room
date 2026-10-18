@@ -52,7 +52,7 @@ const font = (
   await readFile("public/fonts/manrope-latin-variable.woff2")
 ).toString("base64");
 const sample = (
-  await sharp(await readFile("public/demo/identity-v2.svg"))
+  await sharp(await readFile("public/demo/identity-v2.webp"))
     .resize(716, 478)
     .png()
     .toBuffer()

@@ -168,7 +168,7 @@ async function intercept({ requestId, request }) {
       url.pathname.startsWith("/_next/") ||
       url.pathname.startsWith("/fonts/") ||
       url.pathname.startsWith("/brand/") ||
-      /^\/demo\/[a-z]+-v[12]\.svg$/.test(url.pathname) ||
+      /^\/demo\/[a-z]+-v[12]\.webp$/.test(url.pathname) ||
       [
         "/favicon.ico",
         "/icon.svg",

@@ -811,8 +811,8 @@
 }
 .staticPin {
   position: absolute;
-  left: 51%;
-  top: 52%;
+  left: 33%;
+  top: 29%;
   display: grid;
   place-items: center;
   width: 30px;
