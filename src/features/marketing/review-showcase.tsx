@@ -31,6 +31,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
   );
   const [body, setBody] = useState("");
   const [replyBody, setReplyBody] = useState("");
+  const [tooltipId, setTooltipId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
   const conversation = useRef<HTMLDivElement>(null);
@@ -110,32 +111,24 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
             <strong>Design review</strong>
           </span>
         </span>
-        <span className={styles.sampleLabel}>Sample project</span>
-      </div>
-      <div className={styles.previewRoleBar}>
-        <div>
-          <span className={styles.fileType}>EXPLORE BOTH SIDES</span>
-          <p>
-            {designer
-              ? "Review the conversation. Reply and resolve the details."
-              : "Pin your feedback. Give the next version a clear direction."}
-          </p>
-        </div>
-        <div
-          className={styles.previewViewToggle}
-          role="group"
-          aria-label="Sample project view"
-        >
-          {(["DESIGNER", "CLIENT"] as const).map((view) => (
-            <button
-              key={view}
-              type="button"
-              aria-pressed={state.view === view}
-              onClick={() => switchView(view)}
-            >
-              {view === "DESIGNER" ? "Designer view" : "Client view"}
-            </button>
-          ))}
+        <div className={styles.previewToolbarActions}>
+          <span className={styles.sampleLabel}>Sample project</span>
+          <div
+            className={styles.previewViewToggle}
+            role="group"
+            aria-label="Sample project view"
+          >
+            {(["DESIGNER", "CLIENT"] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                aria-pressed={state.view === view}
+                onClick={() => switchView(view)}
+              >
+                {view === "DESIGNER" ? "Designer view" : "Client view"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className={styles.showcaseBody}>
@@ -217,24 +210,72 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
                 onClick={addPin}
               />
               {roots.map((root) => (
-                <button
+                <span
                   key={root.id}
-                  className={`${styles.pin} ${root.id === state.selectedId ? styles.selectedPin : ""}`}
+                  className={styles.pinAnchor}
                   style={{
                     left: `${root.xRatio! * 100}%`,
                     top: `${root.yRatio! * 100}%`,
+                    zIndex: tooltipId === root.id ? 4 : 2,
                   }}
-                  aria-label={`Open comment ${root.threadNumber}: ${root.body}`}
-                  aria-pressed={root.id === state.selectedId}
-                  aria-controls="preview-conversation"
-                  onClick={() => {
-                    dispatch({ type: "select", id: root.id });
-                    setReplyBody("");
-                    setAnnouncement(`Comment ${root.threadNumber} selected.`);
+                  onPointerEnter={(event) => {
+                    if (event.pointerType !== "touch") setTooltipId(root.id);
+                  }}
+                  onPointerLeave={(event) => {
+                    if (!event.currentTarget.contains(document.activeElement))
+                      setTooltipId(null);
+                  }}
+                  onFocus={() => setTooltipId(root.id)}
+                  onBlur={() => setTooltipId(null)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setTooltipId(null);
                   }}
                 >
-                  {root.threadNumber}
-                </button>
+                  <button
+                    className={`${styles.pin} ${root.id === state.selectedId ? styles.selectedPin : ""}`}
+                    aria-label={`Open comment ${root.threadNumber}: ${root.body}`}
+                    aria-pressed={root.id === state.selectedId}
+                    aria-controls="preview-conversation"
+                    aria-describedby={
+                      tooltipId === root.id
+                        ? `preview-tooltip-${root.id}`
+                        : undefined
+                    }
+                    onClick={() => {
+                      dispatch({ type: "select", id: root.id });
+                      setReplyBody("");
+                      setAnnouncement(`Comment ${root.threadNumber} selected.`);
+                    }}
+                  >
+                    {root.threadNumber}
+                  </button>
+                  {tooltipId === root.id && (
+                    <span
+                      id={`preview-tooltip-${root.id}`}
+                      role="tooltip"
+                      className={styles.pinTooltip}
+                      style={{
+                        left:
+                          root.xRatio! < 0.35
+                            ? "-14px"
+                            : root.xRatio! > 0.65
+                              ? "auto"
+                              : "50%",
+                        right: root.xRatio! > 0.65 ? "-14px" : "auto",
+                        transform:
+                          root.xRatio! >= 0.35 && root.xRatio! <= 0.65
+                            ? "translateX(-50%)"
+                            : undefined,
+                      }}
+                    >
+                      <strong>
+                        Sample {root.author.toLowerCase()} · #
+                        {root.threadNumber}
+                      </strong>
+                      <span>{root.body}</span>
+                    </span>
+                  )}
+                </span>
               ))}
               {state.draft && (
                 <span

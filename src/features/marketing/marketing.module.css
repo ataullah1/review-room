@@ -1766,19 +1766,11 @@
   }
 }
 
-.previewRoleBar {
+.previewToolbarActions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 22px;
-  background: #f9faf6;
-  border-bottom: 1px solid var(--border);
-}
-.previewRoleBar p {
-  font-size: 11px;
-  color: var(--quiet);
-  margin-top: 4px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 .previewViewToggle {
   display: flex;
@@ -1819,15 +1811,69 @@
   color: var(--text);
   background: white;
 }
-@media (max-width: 600px) {
-  .previewRoleBar {
-    align-items: stretch;
-    flex-direction: column;
-    padding: 14px;
-    gap: 12px;
+
+.pinAnchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.pinAnchor > .pin {
+  left: 0;
+  top: 0;
+}
+.pinTooltip {
+  position: absolute;
+  top: 18px;
+  width: min(230px, 68vw);
+  padding: 13px 14px;
+  border: 1px solid #d0d8ca;
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  box-shadow: 0 8px 24px #263b3220;
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.pinTooltip::before {
+  content: "";
+  position: absolute;
+  inset: -12px 0 auto;
+  height: 12px;
+}
+.pinTooltip strong {
+  display: block;
+  font-size: 10px;
+  margin-bottom: 5px;
+  color: var(--green);
+}
+.pinTooltip > span {
+  display: block;
+}
+@media (max-width: 900px) {
+  .previewToolbarActions {
+    gap: 7px;
   }
   .previewViewToggle button {
+    padding-inline: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .showcaseToolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .previewToolbarActions {
     flex: 1;
+    justify-content: flex-end;
+  }
+  .previewViewToggle {
+    gap: 2px;
+    padding: 3px;
+  }
+  .previewViewToggle button {
     min-height: 44px;
+    font-size: 10px;
+    padding-inline: 7px;
   }
 }

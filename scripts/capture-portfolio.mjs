@@ -247,12 +247,35 @@ try {
   // Exercise the browser-only handoff before capturing the restored preview.
   async function previewButton(label) {
     await evaluate(`(() => {
-      const section = document.querySelector('[aria-label="Sample project view"]').parentElement.parentElement;
+      const section = document.querySelector('[aria-label="Sample feedback and approval"]').parentElement.parentElement;
       const button = [...section.querySelectorAll('button')].find(button => button.textContent.trim() === ${JSON.stringify(label)});
       if (!button || button.disabled) throw new Error('Preview control unavailable');
       button.click();
     })()`);
   }
+  await waitFor(
+    'document.querySelector("#preview-conversation").textContent.includes("Sample client") && document.querySelector("#preview-conversation").textContent.includes("Sample designer")',
+  );
+  const pinPoint = await evaluate(`(() => {
+    const pin = document.querySelector('[aria-controls="preview-conversation"]');
+    pin.scrollIntoView({block: 'center'});
+    const rect = pin.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  })()`);
+  await command("Input.dispatchMouseEvent", {
+    type: "mouseMoved",
+    ...pinPoint,
+  });
+  await waitFor("!!document.querySelector('[role=\"tooltip\"]')");
+  await evaluate(
+    "document.querySelector('[aria-controls=\"preview-conversation\"]').focus()",
+  );
+  await command("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+  });
+  await waitFor("!document.querySelector('[role=\"tooltip\"]')");
   await click('[aria-label="Sample project view"] button:first-child');
   await waitFor(
     'document.querySelector("#preview-reply") && document.body.textContent.includes("Reply as designer")',
@@ -285,8 +308,9 @@ try {
   await previewButton("Reset preview");
   await viewport(1440, 1440);
   console.log(
-    "Homepage designer reply/resolve, client decisions and 320px role switch passed.",
+    "Homepage initial client/designer thread, hover/focus tooltip, designer reply/resolve, client decisions and 320px role switch passed.",
   );
+  await evaluate("window.scrollTo(0, 0)");
   await capture("01-landing");
   await viewport(1600, 1320);
   await command("Page.navigate", { url: new URL("/demo", origin).href });
