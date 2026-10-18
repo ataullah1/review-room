@@ -2,6 +2,10 @@
 
 Review Room keeps the frontend and backend in one Next.js App Router application. The boundaries follow responsibilities: route handlers handle HTTP, feature modules own UI and input contracts, and data modules own authorized transactions. This keeps a small project deployable as one unit without putting database credentials or access decisions in browser code.
 
+## The public homepage
+
+The public homepage is a static Server Component. Only its mobile navigation and interactive review preview are Client Components. Marketing CSS is scoped separately from application styles, and the homepage loads the existing local Manrope font through `next/font/local`. The preview's reducer owns browser-only sample state; it reuses demo artwork/types and image-coordinate mapping without importing the demo API, Auth or database layer.
+
 ## A private request
 
 ```mermaid

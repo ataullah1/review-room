@@ -19,6 +19,8 @@ Review Room is an independent portfolio project for reviewing creative work. A c
 
 The public demo has three original fictional designs and two versions each. Visitors get separate 24-hour guest sessions, can switch between Designer and Client views, and can reset their sample feedback. Demo sessions cannot upload files, send invitations or access real workspaces.
 
+The homepage also has a smaller interactive review preview. It reuses the original artwork, seeded comments and coordinate helper, with version selection, local pinned feedback and simulated client approval. Its state stays in the browser; it does not start a guest session or call a mutation API. The full `/demo` remains a separate walkthrough.
+
 ## How it is built
 
 One Next.js App Router application serves the UI and backend. Supabase supplies Auth and private Storage; Prisma's PostgreSQL adapter handles application data. The interface uses React, TypeScript, plain CSS, self-hosted DM Sans/Manrope and a small set of source-owned UI primitives.

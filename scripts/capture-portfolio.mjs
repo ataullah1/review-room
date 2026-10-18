@@ -90,6 +90,9 @@ async function viewport(width, height) {
 
 async function capture(name) {
   await evaluate("document.fonts.ready");
+  await evaluate(
+    '[...document.images].forEach(image => image.loading = "eager")',
+  );
   await waitFor(
     "[...document.images].every(image => image.complete && image.naturalWidth > 0)",
   );
@@ -236,9 +239,9 @@ try {
       });
   };
   await command("Fetch.enable", { patterns: [{ urlPattern: "*" }] });
-  await viewport(1440, 1050);
+  await viewport(1440, 1440);
   await command("Page.navigate", { url: origin.href });
-  await waitFor("!!document.querySelector('.landing-hero')");
+  await waitFor("!!document.querySelector('#home-intro')");
   await capture("01-landing");
   await viewport(1600, 1320);
   await command("Page.navigate", { url: new URL("/demo", origin).href });
