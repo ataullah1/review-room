@@ -4,12 +4,13 @@ Image feedback, revisions and client decisions in one workspace.
 
 [Live app](https://rreviewroom.vercel.app) · [Try the demo](https://rreviewroom.vercel.app/demo) · [Case study](docs/PORTFOLIO.md)
 
-![Review Room: pinned feedback beside the original sample design](docs/screenshots/02-pinned-feedback.webp)
+![Review Room homepage with its interactive design-review preview](docs/screenshots/01-landing.webp)
 
 Review Room is an independent portfolio project for reviewing creative work. A comment belongs to a detail in an image, and a decision belongs to a particular version. That keeps “could you change this?” attached to the work it refers to.
 
 ## What you can do
 
+- Sign in with email/password or Google, then work in your own workspace with a cookie-based session.
 - Create projects and assign designers or clients. Owners see all projects in their workspace; everyone else sees their assigned projects.
 - Upload JPG, PNG or WebP images to private storage. New versions preserve earlier files, feedback and decisions.
 - Pin a comment, reply in a thread, and resolve or reopen the discussion.
@@ -19,11 +20,22 @@ Review Room is an independent portfolio project for reviewing creative work. A c
 
 The public demo has three original fictional designs and two versions each. Visitors get separate 24-hour guest sessions, can switch between Designer and Client views, and can reset their sample feedback. Demo sessions cannot upload files, send invitations or access real workspaces.
 
-The homepage also has a smaller interactive review preview. It reuses the original artwork, seeded comments and coordinate helper, with version selection, local pinned feedback and simulated client approval. Its state stays in the browser; it does not start a guest session or call a mutation API. The full `/demo` remains a separate walkthrough.
+The homepage has its own interactive review preview: choose a sample design, switch versions, add a pinned comment, simulate client approval and reset. Its state stays in the browser; it does not start a guest session or call a mutation API. The full `/demo` is a separate walkthrough backed by an isolated guest session.
+
+The marketing page includes the review workflow, feature examples, use cases, privacy/collaboration details and an accessible FAQ. It adapts down to 320px, supports keyboard interaction and respects reduced-motion preferences.
 
 ## How it is built
 
-One Next.js App Router application serves the UI and backend. Supabase supplies Auth and private Storage; Prisma's PostgreSQL adapter handles application data. The interface uses React, TypeScript, plain CSS, self-hosted DM Sans/Manrope and a small set of source-owned UI primitives.
+One Next.js App Router application serves the UI and backend. Supabase supplies Auth and private Storage; Prisma's PostgreSQL adapter handles application data.
+
+| Area               | Implementation                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Application        | Next.js 16 App Router, React 19, TypeScript                                                     |
+| Data               | PostgreSQL, Prisma 7 and the `pg` driver adapter                                                |
+| Identity and files | Supabase Auth with `@supabase/ssr`, private Supabase Storage                                    |
+| Interface          | CSS Modules for marketing, application CSS, Tailwind 4 utilities and source-owned UI primitives |
+| Typography         | Self-hosted DM Sans and Manrope; homepage headings use `next/font/local`                        |
+| Hosting            | Vercel, with separate production/Preview backend guards                                         |
 
 Private requests verify the user on the server, check project access and run database work under a transaction-scoped role with PostgreSQL row-level security. The browser has no direct app-table grants. Preview deployments reject production backend credentials.
 
@@ -35,9 +47,12 @@ Use Node.js 22.18+ and pnpm 11.21.0. PostgreSQL 18 tools are needed for the opti
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-Copy `.env.example` to `.env` **only if you do not already have one**. For the complete Auth/upload workflow, configure a separate development Supabase project: its public URL/key, private server key, matching database connections, private bucket and signup hook. The app uses immediate email signup with confirmation disabled. The exact setup is in [the runbook](docs/RUNBOOK.md).
+Open http://localhost:3000. The public homepage and its browser-only preview do not need backend credentials. Login, uploads, private projects and the full `/demo` do need a configured backend.
+
+For the complete workflow, copy `.env.example` to `.env` **only if you do not already have one**. Configure a separate development Supabase project: its public URL/key, private server key, matching database connections, private bucket and signup hook. Keep the local app URL at `http://localhost:3000`. The app uses immediate email signup with confirmation disabled; Google login additionally needs its provider and callback configuration. The exact setup is in [the runbook](docs/RUNBOOK.md).
 
 After configuring that development project, apply its application migrations and start the app:
 
@@ -46,7 +61,15 @@ pnpm db:deploy
 pnpm dev
 ```
 
-Open http://localhost:3000. The homepage is public; `/app` requires login. New accounts start with an empty workspace. Local database fixtures do not create Auth accounts or populate an authenticated user's workspace.
+`/app` requires login. New accounts start with an empty workspace. Local database fixtures do not create Auth accounts or populate an authenticated user's workspace.
+
+| Route               | Purpose                                         |
+| ------------------- | ----------------------------------------------- |
+| `/`                 | Public homepage and browser-only review preview |
+| `/demo`             | Isolated 24-hour guest walkthrough              |
+| `/signup`, `/login` | Account creation and sign-in                    |
+| `/app`              | Protected workspace entry                       |
+| `/invite`, `/share` | Invitation and read-only share entry            |
 
 For database-only development and permission tests, `pnpm db:local:start` creates an isolated loopback cluster on port **55432** and preserves existing `.env` files. Keep `TEST_DATABASE_URL` pointed at its `review_room_test` database. Stop it with `pnpm db:local:stop`; data is retained. A local PostgreSQL cluster alone does not supply Supabase Auth or Storage.
 
@@ -70,7 +93,8 @@ The Supabase project used by the live site is production. Do not use it for seed
 
 ```text
 src/app/                 Pages, route handlers and layouts
-src/features/            Review, uploads, projects, sharing, activity and demo UI
+src/features/marketing/  Scoped homepage styles, navigation and local review preview
+src/features/            Review, uploads, projects, sharing, activity and guest demo
 src/lib/auth/            Session verification, signup and durable rate limiting
 src/lib/data/            Authorized queries and transactional domain operations
 src/lib/storage/         Private storage adapter
