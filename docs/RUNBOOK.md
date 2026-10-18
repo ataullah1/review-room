@@ -30,7 +30,7 @@ Open http://localhost:3000 for the public landing page. Local fixture profiles a
 ## Schema and migration ownership
 
 - Prisma owns only the PostgreSQL `app` schema. Do not introspect, migrate or seed Supabase's `auth` or `storage` internals with Prisma.
-- Initial models: UserProfile, Workspace, Membership, Project and ProjectMember. Composite foreign keys prevent cross-workspace project assignments. Later domain tables arrive with their roadmap steps.
+- Initial models: UserProfile, Workspace, Membership, Project and ProjectMember. Composite foreign keys prevent cross-workspace project assignments. Additional models cover uploads, feedback, revisions, sharing, activity and demo sessions.
 - `DATABASE_URL` is runtime access (Supabase transaction pooling later); `DIRECT_URL` is CLI/migration access using a direct or session connection. Use dashboard-generated values for the selected provider and driver adapter; do not assume an old Prisma engine's pooling flags apply to `pg`.
 - Runtime Prisma uses `@prisma/adapter-pg`, a small per-process connection pool and a reused server-only client. Static builds do not connect to the database.
 - For local schema changes: edit `prisma/schema.prisma`, run `pnpm db:migrate --name meaningful_name`, inspect the generated SQL and commit it. Run `pnpm db:generate` after schema changes.
@@ -51,7 +51,7 @@ pnpm build
 
 `pnpm test` checks configuration handling and guards against writing fixtures to the wrong database. `test:integration` validates its target before any database command, applies committed migrations to the dedicated `review_room_test`, and tests seed idempotency, membership uniqueness and cross-workspace foreign keys. It does not reset databases. Tests expect the dedicated fixture database to contain only the development fixtures; do not use it for manual application work.
 
-`pnpm format` formats maintained source/configuration/docs. The canonical imported roadmap, original planning files, generated client and migration SQL are excluded. Lint and formatting are separate checks; Next.js build does not run them for you.
+`pnpm format` formats maintained source/configuration/docs. Generated client files and migration SQL are excluded. Lint and formatting are separate checks; Next.js build does not run them for you.
 
 ## Separate development Supabase project
 
@@ -64,10 +64,8 @@ The numbered provider instructions originated during foundation work. Apply them
 5. In that project's SQL editor run `supabase/001_application_access.sql` as the table owner. This revokes browser grants, hardens defaults and enables RLS with no browser policies. Repeat after new application migrations; default privileges apply to the role executing the SQL, so use the same table-owning role consistently.
 6. Keep `app` out of the Data API exposed schemas in Supabase settings. The server checks membership/roles before data access in Step 2; RLS alone does not provide a user's identity context to Prisma.
 7. Run `supabase/002_private_bucket.sql` in the development SQL editor. It creates `review-room-private` with `public=false`, a 10 MiB ceiling and JPG/PNG/WebP MIME hints. An existing conflicting bucket causes an error instead of silently changing it. No browser object policies are added.
-8. Verify that the bucket is private, unauthenticated download is denied, and browser roles cannot read/write application tables. Record the results in PROGRESS.md. These checks passed for the current development project on 17 October 2026. `pnpm supabase:check` reruns read-only connection, role, API and bucket configuration checks; it does not create records, migrate, upload or send email.
+8. Verify that the bucket is private, unauthenticated download is denied, and browser roles cannot read/write application tables. These checks passed for the current development project on 17 October 2026. `pnpm supabase:check` reruns read-only connection, role, API and bucket configuration checks; it does not create records, migrate, upload or send email.
 9. Auth callbacks, real identity and upload finalization come in Steps 2 and 4. No external recipient is contacted during setup.
-
-During initial private-storage verification, an agent-created temporary PNG was uploaded, read through privileged/signed access, denied through anonymous/public access, and then deleted. The application upload flow is still Step 4.
 
 Do not point the local integration harness or seed at Supabase. To return to local development, restore the loopback URLs from `.env.example` without overwriting any saved secret values.
 
@@ -78,7 +76,7 @@ Do not point the local integration harness or seed at Supabase. To return to loc
 - Connection failure: start the local cluster, check local `.env` and rerun migrations. Do not print connection strings to debug.
 - Migration failure: inspect the migration and database state. Use an additive forward fix; do not reset an environment with valuable data.
 - Generated client missing: run `pnpm db:generate`; `postinstall` and `pnpm build` also generate it without requiring a database connection.
-- For which browser and device checks were performed, use [PROGRESS.md](PROGRESS.md). Successful TypeScript/build checks alone do not establish browser acceptance.
+- Successful TypeScript/build checks alone do not establish browser acceptance. Exercise the release checklist in [RELEASE.md](RELEASE.md).
 
 ## References checked for this foundation
 
@@ -96,7 +94,7 @@ Step 1 is already complete. The additive `20261017000200_identity_permissions` m
 The current user explicitly requested immediate signup without email confirmation. The previous verification-required description above records Step 1's setup only.
 
 1. **Supabase Dashboard → Authentication → Sign In / Providers → Email → Confirm email → OFF → Save.** Keep the Email provider enabled. Live settings are checked before signup; a mismatch returns a temporary-unavailable error before creating an account/sending email.
-2. **Supabase Dashboard → Authentication → Hooks → Before User Created → PostgreSQL function → schema app → before_user_created → Enable/Save.** The SQL function/grants already exist. Enabling this is necessary to stop bots from bypassing the app limiter by calling Supabase's public signup API directly. It is available on the Free plan; no new paid service is required. Without Dashboard access or a Management API access token, the agent cannot enable/verify this setting from SQL installation alone.
+2. **Supabase Dashboard → Authentication → Hooks → Before User Created → PostgreSQL function → schema app → before_user_created → Enable/Save.** The SQL function/grants already exist. Enabling this is necessary to stop bots from bypassing the app limiter by calling Supabase's public signup API directly. It is available on the Free plan; no new paid service is required. Verify that the hook is enabled in the Dashboard; installing its SQL function alone does not enable it.
 3. **Supabase Dashboard → Authentication → Rate Limits:** retain Supabase's built-in signup/token limits. They are additional to the application counters and are not disabled by this implementation. Server-side publishable-key requests may share the server's upstream IP quota; the application limiter separately enforces the Vercel client-IP quota.
 
 No Dashboard-setting change should be inferred from an applied database migration. `pnpm supabase:check` verifies current email confirmation mode and hook installation/grants, but reports that hook activation must be checked separately. A real provider signup without a permit must be rejected after activation.
@@ -118,8 +116,6 @@ pnpm test:integration
 pnpm build
 pnpm supabase:check
 ```
-
-Local tests cover concurrent bootstrap, two independent limiter clients/restart, hourly/daily limits, permit binding/replay, server authorization and deliberately unfiltered RLS queries. Do not run the local fixture seed against hosted Supabase. The live Auth session check used an agent-created, email-confirmed test account through the Admin API without sending email, exercised login/refresh/logout, then deleted its profile/workspace/Auth account. This does not substitute for testing the immediate public signup happy path after the Dashboard settings are correct.
 
 Do not reapply supabase/001_application_access.sql as a migration: application request policies are now managed by the Step 2 migration. The original hardening SQL is idempotent and preserves policies, but routine setup should use committed additive migrations.
 
@@ -143,8 +139,6 @@ Provider setup, if configuring another environment:
 4. Supabase Dashboard → Authentication → URL Configuration → Redirect URLs: allow `http://localhost:3000/auth/callback`; set Site URL to `http://localhost:3000`. Add the actual HTTPS production origin and callback when deploying. The app derives its callback from `NEXT_PUBLIC_APP_URL`, not request input.
 5. Keep Authentication → Hooks → Before User Created pointing to `pg-functions://postgres/app/before_user_created`.
 
-On 17 October 2026 the public settings endpoint reported Google enabled and email confirmation off. App OAuth initiation returned 200 with HttpOnly intent and PKCE cookies, and Supabase authorization returned 302 to `accounts.google.com`. The new hook migration was applied to development Supabase. No Google Dashboard setting was changed by the agent. The callback allowlist, Google consent configuration, and completed interactive Google sign-in were not independently verified; finish one browser sign-in to accept the live flow.
-
 Reference: [Supabase Google OAuth setup and SSR callback](https://supabase.com/docs/guides/auth/social-login/auth-google).
 
 ### Step 3 projects
@@ -158,8 +152,6 @@ Projects default to Active. Search runs on the server within the verified worksp
 Deploy application policy changes with `pnpm db:deploy`: migrations `20261017000400_project_management` and `20261017000500_project_insert_visibility` were applied to the existing development project on 17 October 2026. They add owner-only writes and scoped teammate-name access, retaining existing tenant isolation and browser-role denial. No Prisma schema change or Supabase Auth/Storage internal schema change is required.
 
 Checks: `pnpm check`, `pnpm test:integration`, `pnpm build`, `pnpm supabase:check`. Integration tests use only the dedicated local test database. Development Supabase connection timeouts can surface the project retry state; an error does not prove a previous write failed. Project creation retries reuse the same submission ID while the form is mounted; archive/restore are idempotent. Refreshing a creation form starts a new submission.
-
-Live Step 3 acceptance on 17 October 2026 used an agent-owned, confirmed temporary Auth account without sending email, a separate temporary workspace, and the user's existing development server. Browser creation/archive/restore/search/logout and desktop/mobile rendering passed. Database connection/transaction timeouts also exercised the error state; its Try again button uses this installed Next.js version's `retry()` prop to fetch fresh server content. All temporary application and Auth records were removed afterward. No user projects were created, archived or modified by this test.
 
 ### Step 4 private image uploads
 
@@ -283,7 +275,7 @@ Before release, a human still needs to use a real phone to upload a portrait pho
 
 The owner confirmed on 18 October 2026 that `pwzwrknnzkdagfcjnqkr` now backs https://rreviewroom.vercel.app. Earlier entries describing it as hosted development are historical. Do not rerun the old hosted acceptance/fixture instructions against it. The guarded browser runner now refuses that project; local tests and `pnpm db:rehearse` use the dedicated local PostgreSQL cluster. Preview backends require matching independent credentials and cannot use the live project.
 
-The authoritative current steps, exact Dashboard paths, production environment table, CA configuration, migration/backup/recovery order, daily cleanup limits, live smoke command and unfinished manual release checks are in [RELEASE.md](RELEASE.md). The factual portfolio draft and recording storyboard are in [PORTFOLIO.md](PORTFOLIO.md). Production deployment and Dashboard changes were not performed by the agent; do not infer a passing live release from a passing local build.
+The authoritative current steps, exact Dashboard paths, production environment table, CA configuration, migration/backup/recovery order, daily cleanup limits, live smoke command and unfinished manual release checks are in [RELEASE.md](RELEASE.md). Do not infer a passing live release from a passing local build.
 
 ### Production authentication failure diagnostics
 

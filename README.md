@@ -2,7 +2,7 @@
 
 Image feedback, revisions and client decisions in one workspace.
 
-[Live app](https://rreviewroom.vercel.app) · [Try the demo](https://rreviewroom.vercel.app/demo) · [Case study](docs/PORTFOLIO.md)
+[Live app](https://rreviewroom.vercel.app) · [Try the demo](https://rreviewroom.vercel.app/demo) · [Architecture](docs/ARCHITECTURE.md)
 
 ![Review Room homepage with its interactive design-review preview](docs/screenshots/01-landing.webp)
 
@@ -18,9 +18,9 @@ Review Room is an independent portfolio project for reviewing creative work. A c
 - Invite someone by email-bound link, or share one version through an expiring, revocable read-only link. The owner copies and sends links; the app does not send invitation emails.
 - Follow project activity with a separate unread position for each person.
 
-The public demo has three original fictional designs and two versions each. Visitors get separate 24-hour guest sessions, can switch between Designer and Client views, and can reset their sample feedback. Demo sessions cannot upload files, send invitations or access real workspaces.
+The public demo has three fictional design concepts and two versions each. Visitors get separate 24-hour guest sessions, can switch between Designer and Client views, and can reset their sample feedback. Demo sessions cannot upload files, send invitations or access real workspaces.
 
-The homepage has its own interactive review preview: choose a sample design, switch versions, add a pinned comment, simulate client approval and reset. Its state stays in the browser; it does not start a guest session or call a mutation API. The full `/demo` is a separate walkthrough backed by an isolated guest session.
+The homepage has its own interactive review preview: choose a sample design, switch versions and try Designer or Client view. Add pinned feedback, reply to threads, resolve discussions, request changes or approve a version, then reset. Its state stays in the browser; it does not start a guest session or call a mutation API. The full `/demo` is a separate walkthrough backed by an isolated guest session.
 
 The marketing page includes the review workflow, feature examples, use cases, privacy/collaboration details and an accessible FAQ. It adapts down to 320px, supports keyboard interaction and respects reduced-motion preferences.
 
@@ -104,16 +104,13 @@ scripts/                 Local checks, maintenance and asset capture
 tests/                  Unit and local PostgreSQL integration tests
 ```
 
-## Release and portfolio
+## Documentation and release
 
 Vercel builds the connected GitHub branch with `pnpm build`. Build generates the ignored Prisma Client explicitly, including when install dependencies are cached; migrations are a separate operator action. Production database TLS requires the configured Supabase CA certificate.
 
 - [Release setup, Auth URLs, backups and rollback](docs/RELEASE.md)
-- [Current status and recorded verification](docs/PROGRESS.md)
-- [Architecture](docs/ARCHITECTURE.md) · [Decisions and historical notes](docs/DECISIONS.md)
-- [Case study and walkthrough script](docs/PORTFOLIO.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Design decisions](docs/DECISIONS.md)
 - [Screenshot gallery and reproduction](docs/screenshots/README.md)
 - [Original brand assets](public/brand/README.md) · [Font licenses](public/fonts/README.md)
-- [Original roadmap](docs/ROADMAP.md)
 
-Screenshots use the real local UI with intercepted seeded demo responses, not customer work or production fixtures. Run `pnpm portfolio:capture` against a local production server to regenerate them. The case study covers the implementation and its limits; this project makes no customer, revenue or load-performance claims.
+Screenshots use the real local UI with intercepted seeded demo responses, not customer work or production fixtures. Run `pnpm portfolio:capture` against a local production server to regenerate them. No customer, revenue or load-performance claims are made.

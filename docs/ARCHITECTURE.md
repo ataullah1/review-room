@@ -65,4 +65,4 @@ The public demo has a separate `DemoSession` model and database request role. It
 
 No billing, AI summaries, video/PDF annotation, realtime cursors, automatic invitation email or mobile app. These would each introduce their own persistence, delivery or product decisions. The current project focuses on image feedback and version review.
 
-[Release operations](RELEASE.md) · [Decision history](DECISIONS.md) · [Recorded verification](PROGRESS.md)
+[Release operations](RELEASE.md) · [Design decisions](DECISIONS.md)

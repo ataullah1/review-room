@@ -2,8 +2,6 @@
 
 Prepared 18 October 2026. Target: **https://rreviewroom.vercel.app**. The owner confirmed that **pwzwrknnzkdagfcjnqkr** now serves the live application; earlier documents calling it development describe historical checks. Treat it as production from this point onward.
 
-**Current status:** the owner deployed the updated application through the connected GitHub/Vercel project. All 17 anonymous release checks passed on the live domain on 18 October 2026. The owner reports completing the follow-up login/Google, review workflow, phone, Search Console and operational setup checks. These reports do not establish an agent-run authenticated journey, production restore rehearsal or Google indexing. The agent has not changed Dashboard settings, pushed, deployed or created production fixtures during this handoff.
-
 **Historical baseline:** before that deployment, the older homepage lacked the demo link and `/demo` returned 404; all 11 then-current release checks failed. That earlier result is superseded by the 17 passing live checks above, rather than erased from the verification history. The instructions below remain the setup and operations reference for future releases.
 
 ## 1. Set Production environment variables before pushing
@@ -38,7 +36,7 @@ Without a separate backend, Preview can render the public landing page, while ba
 
 If an interactive Preview is later needed, create a separate disposable Supabase project and migrate/configure it independently. Set `PREVIEW_SUPABASE_PROJECT_REF`, that project's URL/keys/CA and pooled URLs in Preview only. Both DB and Auth must match the declared non-production project; a copied production DIRECT_URL also causes rejection. Set a preview-specific app origin/Auth callback allowlist; stable staging is easier than broad wildcard URLs. Never use production credentials for an untrusted branch build even with this runtime guard.
 
-`pnpm test:browser` now requires `HOSTED_TEST_PROJECT_REF`, corresponding non-production public URL and session/direct DB URL. It refuses the live project **before connecting or creating fixtures**. Historical runbook instructions targeting the old development project are superseded. The normal unit/integration suite and migration rehearsal remain local. No separate hosted development project has been created by the agent.
+`pnpm test:browser` now requires `HOSTED_TEST_PROJECT_REF`, corresponding non-production public URL and session/direct DB URL. It refuses the live project **before connecting or creating fixtures**. Historical runbook instructions targeting the old development project are superseded. The normal unit/integration suite and migration rehearsal remain local.
 
 ## 3. Auth Dashboard paths and exact URLs
 
@@ -58,7 +56,7 @@ Google Cloud Console → **Google Auth Platform → Clients → existing Web app
 - Authorized redirect URI: `https://pwzwrknnzkdagfcjnqkr.supabase.co/auth/v1/callback`.
 - The application `/auth/callback` belongs in the Supabase redirect allowlist; it is not the Google-to-Supabase callback above.
 
-Supabase → Authentication → Sign In / Providers → **Google**: the same Google client ID/secret must be configured. Keep the secret in the provider Dashboard. Verify Google consent/publishing/test-user status as appropriate for the existing OAuth client. A real interactive sign-in/consent/callback is still a manual acceptance step. No Google, Supabase or Vercel setting has been changed by the agent. [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google).
+Supabase → Authentication → Sign In / Providers → **Google**: the same Google client ID/secret must be configured. Keep the secret in the provider Dashboard. Verify Google consent/publishing/test-user status as appropriate for the existing OAuth client. A real interactive sign-in/consent/callback is still a manual acceptance step. [Supabase Google setup](https://supabase.com/docs/guides/auth/social-login/auth-google).
 
 ## 4. Build, migrations and release order
 
