@@ -15,6 +15,8 @@ import {
   MessageSquare,
   MousePointer2,
   Plus,
+  PenTool,
+  UserRound,
   RotateCcw,
 } from "lucide-react";
 import { demoAssets } from "@/features/demo/catalog";
@@ -122,10 +124,18 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
               <button
                 key={view}
                 type="button"
+                aria-label={
+                  view === "DESIGNER" ? "Designer view" : "Client view"
+                }
                 aria-pressed={state.view === view}
                 onClick={() => switchView(view)}
               >
-                {view === "DESIGNER" ? "Designer view" : "Client view"}
+                {view === "DESIGNER" ? (
+                  <PenTool size={13} aria-hidden="true" />
+                ) : (
+                  <UserRound size={13} aria-hidden="true" />
+                )}
+                <span>{view === "DESIGNER" ? "Designer" : "Client"}</span>
               </button>
             ))}
           </div>
