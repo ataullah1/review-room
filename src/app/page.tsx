@@ -680,8 +680,16 @@ export default function Page() {
               better result.
             </span>
             <span>
-              <span className={styles.liveDot} />
-              An independent product project
+              Designed &amp; built by
+              <a
+                className={styles.creatorLink}
+                href="https://ataullah.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Ataullah’s portfolio (opens in a new tab)"
+              >
+                Ataullah
+              </a>
             </span>
           </div>
         </div>
