@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {
   useEffect,
   useReducer,
@@ -10,6 +11,7 @@ import {
   type MouseEvent,
 } from "react";
 import {
+  ArrowUpRight,
   Check,
   CheckCheck,
   MessageSquare,
@@ -552,16 +554,22 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
             · Browser only. No changes are saved.
           </span>
         </span>
-        <button
-          onClick={() => {
-            dispatch({ type: "reset", seed });
-            setBody("");
-            setReplyBody("");
-            setAnnouncement("Preview reset. All sample data restored.");
-          }}
-        >
-          <RotateCcw size={13} aria-hidden="true" /> Reset preview
-        </button>
+        <div className={styles.previewBottomActions}>
+          <button
+            onClick={() => {
+              dispatch({ type: "reset", seed });
+              setBody("");
+              setReplyBody("");
+              setTooltipId(null);
+              setAnnouncement("Preview reset. All sample data restored.");
+            }}
+          >
+            <RotateCcw size={13} aria-hidden="true" /> Reset preview
+          </button>
+          <Link href="/demo" prefetch={false} className={styles.fullDemoLink}>
+            Explore full demo <ArrowUpRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
       <p
         className={styles.srOnly}
