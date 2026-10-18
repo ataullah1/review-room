@@ -27,17 +27,19 @@ import { MarketingNavigation } from "@/features/marketing/navigation";
 import { ReviewShowcase } from "@/features/marketing/review-showcase";
 import styles from "@/features/marketing/marketing.module.css";
 
+import type { Metadata } from "next";
+import {
+  productionOrigin,
+  isProductionDeployment,
+} from "@/lib/config/deployment";
+
 const headingFont = localFont({
   src: "../../public/fonts/manrope-latin-variable.woff2",
   variable: "--marketing-heading",
   display: "swap",
   weight: "200 800",
 });
-import type { Metadata } from "next";
-import {
-  productionOrigin,
-  isProductionDeployment,
-} from "@/lib/config/deployment";
+
 export const metadata: Metadata = {
   title: "Review Room — Visual Review and Client Approval",
   description:
