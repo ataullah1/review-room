@@ -242,6 +242,51 @@ try {
   await viewport(1440, 1440);
   await command("Page.navigate", { url: origin.href });
   await waitFor("!!document.querySelector('#home-intro')");
+  await waitFor('document.readyState === "complete"');
+  await evaluate("new Promise(resolve => setTimeout(resolve, 500))");
+  // Exercise the browser-only handoff before capturing the restored preview.
+  async function previewButton(label) {
+    await evaluate(`(() => {
+      const section = document.querySelector('[aria-label="Sample project view"]').parentElement.parentElement;
+      const button = [...section.querySelectorAll('button')].find(button => button.textContent.trim() === ${JSON.stringify(label)});
+      if (!button || button.disabled) throw new Error('Preview control unavailable');
+      button.click();
+    })()`);
+  }
+  await click('[aria-label="Sample project view"] button:first-child');
+  await waitFor(
+    'document.querySelector("#preview-reply") && document.body.textContent.includes("Reply as designer")',
+  );
+  await evaluate(`(() => {
+    const input = document.querySelector('#preview-reply');
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, 'Updated the spacing for this review.');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await previewButton("Send reply");
+  await waitFor(
+    'document.querySelector("#preview-conversation").textContent.includes("Updated the spacing for this review.")',
+  );
+  await previewButton("Resolve thread");
+  await waitFor(
+    'document.querySelector("#preview-conversation").textContent.includes("Resolved")',
+  );
+  await previewButton("Reopen thread");
+  await previewButton("Try client view");
+  await previewButton("Request changes");
+  await waitFor(
+    'document.body.textContent.includes("Another round, with direction.")',
+  );
+  await previewButton("Approve version");
+  await waitFor('document.body.textContent.includes("Approved in preview")');
+  await viewport(320, 1000);
+  await waitFor("document.documentElement.scrollWidth <= innerWidth");
+  await click('[aria-label="Sample project view"] button:first-child');
+  await waitFor('document.body.textContent.includes("Reply as designer")');
+  await previewButton("Reset preview");
+  await viewport(1440, 1440);
+  console.log(
+    "Homepage designer reply/resolve, client decisions and 320px role switch passed.",
+  );
   await capture("01-landing");
   await viewport(1600, 1320);
   await command("Page.navigate", { url: new URL("/demo", origin).href });

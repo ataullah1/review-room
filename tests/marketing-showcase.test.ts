@@ -10,6 +10,84 @@ function preview() {
 }
 
 describe("browser-only marketing preview", () => {
+  it("keeps role changes local and enforces designer/client decision boundaries", () => {
+    let state = preview();
+    const seed = structuredClone(state.comments);
+    expect(showcaseReducer(state, { type: "resolve" })).toBe(state);
+    state = showcaseReducer(state, { type: "view", view: "DESIGNER" });
+    expect(showcaseReducer(state, { type: "approve" })).toBe(state);
+    expect(showcaseReducer(state, { type: "request-changes" })).toBe(state);
+    state = showcaseReducer(state, {
+      type: "reply",
+      id: "designer-reply",
+      body: "Updated the spacing.",
+    });
+    expect(state.comments.at(-1)).toMatchObject({
+      author: "DESIGNER",
+      parentId: state.selectedId,
+      version: 2,
+    });
+    state = showcaseReducer(state, { type: "resolve" });
+    expect(
+      state.comments.find((comment) => comment.id === state.selectedId)
+        ?.resolved,
+    ).toBe(true);
+    state = showcaseReducer(state, { type: "resolve" });
+    expect(
+      state.comments.find((comment) => comment.id === state.selectedId)
+        ?.resolved,
+    ).toBe(false);
+    state = showcaseReducer(state, { type: "view", view: "CLIENT" });
+    state = showcaseReducer(state, { type: "request-changes" });
+    expect(
+      state.decisions.find((decision) => decision.assetId === "identity")
+        ?.decision,
+    ).toBe("CHANGES_REQUESTED");
+    state = showcaseReducer(state, { type: "approve" });
+    expect(
+      state.decisions.find((decision) => decision.assetId === "identity")
+        ?.decision,
+    ).toBe("APPROVED");
+    expect(seed).toEqual(seededDemo().comments);
+  });
+
+  it("preserves conversation on role switch and rejects historical or invalid replies", () => {
+    let state = showcaseReducer(preview(), {
+      type: "pin",
+      point: { xRatio: 0.2, yRatio: 0.4 },
+    });
+    state = showcaseReducer(state, { type: "view", view: "DESIGNER" });
+    expect(state.draft).toBeNull();
+    state = showcaseReducer(state, { type: "cancel" });
+    for (const body of [" ", "x".repeat(301), "bad\u0000text"]) {
+      expect(
+        showcaseReducer(state, { type: "reply", id: "invalid", body }),
+      ).toBe(state);
+    }
+    const historical = showcaseReducer(state, { type: "version", version: 1 });
+    expect(
+      showcaseReducer(historical, {
+        type: "reply",
+        id: "old-reply",
+        body: "No changes here",
+      }),
+    ).toBe(historical);
+    expect(showcaseReducer(historical, { type: "resolve" })).toBe(historical);
+    const designer = showcaseReducer(state, {
+      type: "pin",
+      point: { xRatio: 0.1, yRatio: 0.2 },
+    });
+    const comment = showcaseReducer(designer, {
+      type: "comment",
+      id: "designer-pin",
+      body: "Please review this detail.",
+    });
+    expect(comment.comments.at(-1)?.author).toBe("DESIGNER");
+    expect(
+      showcaseReducer(comment, { type: "reset", seed: seededDemo() }).view,
+    ).toBe("CLIENT");
+  });
+
   it("keeps added feedback on its own asset and version without mutating the seed", () => {
     const seed = seededDemo();
     const original = structuredClone(seed);

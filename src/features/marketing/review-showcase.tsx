@@ -30,6 +30,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
     createShowcaseState,
   );
   const [body, setBody] = useState("");
+  const [replyBody, setReplyBody] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
   const conversation = useRef<HTMLDivElement>(null);
@@ -51,6 +52,17 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
   );
   const approved = decision?.decision === "APPROVED";
   const historical = state.version === 1;
+  const designer = state.view === "DESIGNER";
+  const changesRequested = decision?.decision === "CHANGES_REQUESTED";
+
+  function switchView(view: "DESIGNER" | "CLIENT") {
+    dispatch({ type: "view", view });
+    setBody("");
+    setReplyBody("");
+    setAnnouncement(
+      `${view === "DESIGNER" ? "Designer" : "Client"} view. ${view === "DESIGNER" ? "Reply to feedback and resolve threads." : "Leave feedback, request changes or approve the current version."}`,
+    );
+  }
 
   useEffect(() => {
     if (state.draft) input.current?.focus();
@@ -100,6 +112,32 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
         </span>
         <span className={styles.sampleLabel}>Sample project</span>
       </div>
+      <div className={styles.previewRoleBar}>
+        <div>
+          <span className={styles.fileType}>EXPLORE BOTH SIDES</span>
+          <p>
+            {designer
+              ? "Review the conversation. Reply and resolve the details."
+              : "Pin your feedback. Give the next version a clear direction."}
+          </p>
+        </div>
+        <div
+          className={styles.previewViewToggle}
+          role="group"
+          aria-label="Sample project view"
+        >
+          {(["DESIGNER", "CLIENT"] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              aria-pressed={state.view === view}
+              onClick={() => switchView(view)}
+            >
+              {view === "DESIGNER" ? "Designer view" : "Client view"}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className={styles.showcaseBody}>
         <nav className={styles.assetRail} aria-label="Sample designs">
           <span className={styles.railLabel}>FILES</span>
@@ -111,6 +149,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
               onClick={() => {
                 dispatch({ type: "asset", assetId: item.id });
                 setBody("");
+                setReplyBody("");
                 setAnnouncement(`Opened ${item.title}, version 2.`);
               }}
             >
@@ -145,6 +184,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
                   const value = Number(event.target.value) as 1 | 2;
                   dispatch({ type: "version", version: value });
                   setBody("");
+                  setReplyBody("");
                   setAnnouncement(
                     `Viewing version ${value}. ${value === 1 ? "Historical version is read only." : "Current version is ready for feedback."}`,
                   );
@@ -172,7 +212,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
               />
               <button
                 className={styles.artHotspot}
-                disabled={historical}
+                disabled={historical || state.comments.length >= 40}
                 aria-label="Place a sample feedback pin on the image"
                 onClick={addPin}
               />
@@ -189,6 +229,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
                   aria-controls="preview-conversation"
                   onClick={() => {
                     dispatch({ type: "select", id: root.id });
+                    setReplyBody("");
                     setAnnouncement(`Comment ${root.threadNumber} selected.`);
                   }}
                 >
@@ -217,7 +258,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
                 : "Click the image to leave a thought"}
             </span>
             <button
-              disabled={historical}
+              disabled={historical || state.comments.length >= 40}
               onClick={() => {
                 dispatch({ type: "pin", point: { xRatio: 0.5, yRatio: 0.5 } });
                 setBody("");
@@ -308,6 +349,69 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
                     <p>{reply.body}</p>
                   </div>
                 ))}
+                {!historical && (
+                  <form
+                    className={`${styles.previewForm} ${styles.replyForm}`}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (!replyBody.trim()) return;
+                      dispatch({
+                        type: "reply",
+                        id: crypto.randomUUID(),
+                        body: replyBody,
+                      });
+                      setReplyBody("");
+                      setAnnouncement(
+                        `Reply added as sample ${state.view.toLowerCase()}. Browser preview only.`,
+                      );
+                    }}
+                  >
+                    <label htmlFor="preview-reply">
+                      Reply as {designer ? "designer" : "client"}
+                    </label>
+                    <textarea
+                      id="preview-reply"
+                      rows={2}
+                      maxLength={300}
+                      required
+                      value={replyBody}
+                      onChange={(event) => setReplyBody(event.target.value)}
+                      placeholder={
+                        designer
+                          ? "Updated in the next revision…"
+                          : "Thanks, this is getting closer…"
+                      }
+                    />
+                    <div>
+                      <button
+                        className={styles.smallPrimary}
+                        disabled={
+                          !replyBody.trim() || state.comments.length >= 40
+                        }
+                      >
+                        Send reply
+                      </button>
+                      {designer && (
+                        <button
+                          type="button"
+                          className={styles.textButton}
+                          onClick={() => {
+                            dispatch({ type: "resolve" });
+                            setAnnouncement(
+                              selected.resolved
+                                ? "Thread reopened."
+                                : "Thread resolved.",
+                            );
+                          }}
+                        >
+                          {selected.resolved
+                            ? "Reopen thread"
+                            : "Resolve thread"}
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                )}
                 <div className={styles.threadHint}>
                   <MessageSquare size={14} aria-hidden="true" />
                   Attached to the detail. Always.
@@ -320,38 +424,72 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
             )}
           </div>
           <div className={styles.approvalPanel}>
-            <span className={styles.fileType}>THE NEXT STEP</span>
+            <span className={styles.fileType}>
+              {designer ? "CLIENT REVIEW STATUS" : "YOUR REVIEW DECISION"}
+            </span>
             <h4>
               {historical
                 ? "A little history."
                 : approved
                   ? "A clear go-ahead."
-                  : "Ready for your review."}
+                  : changesRequested
+                    ? "Another round, with direction."
+                    : designer
+                      ? "Ready for client review."
+                      : "Ready for your review."}
             </h4>
             <p>
               {historical
-                ? "This version stays read only. Switch to the current version to try an approval."
+                ? "Earlier versions stay read only. Switch to version 2 to continue."
                 : approved
                   ? "Approved by the sample client, for this version."
-                  : "Try the client’s role. Give this version your go-ahead."}
+                  : changesRequested
+                    ? "The sample client requested changes to this version."
+                    : designer
+                      ? "Respond to feedback, then see the handoff from the client’s side."
+                      : "Approve this version or request another round of changes."}
             </p>
-            <button
-              className={`${styles.approveButton} ${approved ? styles.isApproved : ""}`}
-              disabled={historical || approved}
-              onClick={() => {
-                dispatch({ type: "approve" });
-                setAnnouncement(
-                  `Version ${state.version} approved in this browser preview only.`,
-                );
-              }}
-            >
-              {approved ? (
-                <CheckCheck size={17} aria-hidden="true" />
+            {!historical &&
+              (designer ? (
+                <button
+                  className={styles.approveButton}
+                  onClick={() => switchView("CLIENT")}
+                >
+                  Try client view
+                </button>
               ) : (
-                <Check size={17} aria-hidden="true" />
-              )}
-              {approved ? "Approved in preview" : "Approve version"}
-            </button>
+                <>
+                  <button
+                    className={`${styles.approveButton} ${approved ? styles.isApproved : ""}`}
+                    disabled={approved}
+                    onClick={() => {
+                      dispatch({ type: "approve" });
+                      setAnnouncement(
+                        `Version ${state.version} approved in this browser preview only.`,
+                      );
+                    }}
+                  >
+                    {approved ? (
+                      <CheckCheck size={17} aria-hidden="true" />
+                    ) : (
+                      <Check size={17} aria-hidden="true" />
+                    )}
+                    {approved ? "Approved in preview" : "Approve version"}
+                  </button>
+                  <button
+                    className={styles.requestChanges}
+                    disabled={changesRequested}
+                    onClick={() => {
+                      dispatch({ type: "request-changes" });
+                      setAnnouncement(
+                        `Changes requested for version ${state.version}. Browser preview only.`,
+                      );
+                    }}
+                  >
+                    {changesRequested ? "Changes requested" : "Request changes"}
+                  </button>
+                </>
+              ))}
           </div>
         </aside>
       </div>
@@ -367,6 +505,7 @@ export function ReviewShowcase({ seed }: { seed: DemoState }) {
           onClick={() => {
             dispatch({ type: "reset", seed });
             setBody("");
+            setReplyBody("");
             setAnnouncement("Preview reset. All sample data restored.");
           }}
         >

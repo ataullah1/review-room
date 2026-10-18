@@ -3,6 +3,7 @@ import type { DemoComment, DemoState } from "../demo/state";
 import type { ImagePoint } from "../comments/coordinates";
 
 export type ShowcaseState = DemoState & {
+  view: "DESIGNER" | "CLIENT";
   assetId: DemoAssetId;
   version: 1 | 2;
   selectedId: string | null;
@@ -10,6 +11,10 @@ export type ShowcaseState = DemoState & {
 };
 
 export type ShowcaseAction =
+  | { type: "view"; view: "DESIGNER" | "CLIENT" }
+  | { type: "reply"; id: string; body: string }
+  | { type: "resolve" }
+  | { type: "request-changes" }
   | { type: "asset"; assetId: DemoAssetId }
   | { type: "version"; version: 1 | 2 }
   | { type: "select"; id: string }
@@ -23,6 +28,7 @@ export function createShowcaseState(seed: DemoState): ShowcaseState {
   return {
     comments: [...seed.comments],
     decisions: [...seed.decisions],
+    view: "CLIENT",
     assetId: "identity",
     version: 2,
     selectedId:
@@ -57,6 +63,61 @@ export function showcaseReducer(
   action: ShowcaseAction,
 ): ShowcaseState {
   switch (action.type) {
+    case "view":
+      return { ...state, view: action.view, draft: null };
+    case "reply": {
+      const body = action.body.trim();
+      const parent = state.comments.find(
+        (comment) =>
+          comment.id === state.selectedId &&
+          !comment.parentId &&
+          comment.assetId === state.assetId &&
+          comment.version === state.version,
+      );
+      if (
+        state.version !== 2 ||
+        !parent ||
+        !body ||
+        body.length > 300 ||
+        body.includes("\u0000") ||
+        state.comments.length >= 40 ||
+        state.comments.some((comment) => comment.id === action.id)
+      )
+        return state;
+      return {
+        ...state,
+        comments: [
+          ...state.comments,
+          {
+            id: action.id,
+            assetId: state.assetId,
+            version: state.version,
+            parentId: parent.id,
+            threadNumber: null,
+            xRatio: null,
+            yRatio: null,
+            body,
+            author: state.view,
+            resolved: false,
+            createdAt: "2026-10-01T10:00:00.000Z",
+          },
+        ],
+      };
+    }
+    case "resolve": {
+      if (state.view !== "DESIGNER" || state.version !== 2) return state;
+      return {
+        ...state,
+        comments: state.comments.map((comment) =>
+          comment.id === state.selectedId &&
+          !comment.parentId &&
+          comment.assetId === state.assetId &&
+          comment.version === state.version
+            ? { ...comment, resolved: !comment.resolved }
+            : comment,
+        ),
+      };
+    }
     case "asset":
       return {
         ...state,
@@ -104,6 +165,7 @@ export function showcaseReducer(
       if (
         state.version !== 2 ||
         !state.draft ||
+        state.comments.length >= 40 ||
         !body ||
         body.length > 300 ||
         body.includes("\u0000") ||
@@ -136,7 +198,7 @@ export function showcaseReducer(
             threadNumber: number,
             ...state.draft,
             body,
-            author: "CLIENT",
+            author: state.view,
             resolved: false,
             createdAt: "2026-10-01T10:00:00.000Z",
           },
@@ -144,7 +206,8 @@ export function showcaseReducer(
       };
     }
     case "approve":
-      if (state.version !== 2) return state;
+    case "request-changes":
+      if (state.version !== 2 || state.view !== "CLIENT") return state;
       return {
         ...state,
         decisions: [
@@ -156,8 +219,12 @@ export function showcaseReducer(
           {
             assetId: state.assetId,
             version: state.version,
-            decision: "APPROVED",
-            note: "Approved in this browser preview.",
+            decision:
+              action.type === "approve" ? "APPROVED" : "CHANGES_REQUESTED",
+            note:
+              action.type === "approve"
+                ? "Approved in this browser preview."
+                : "Changes requested in this browser preview.",
             createdAt: "2026-10-01T10:00:00.000Z",
           },
         ],
