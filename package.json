@@ -29,7 +29,8 @@
     "test:browser": "node scripts/test-browser.mjs",
     "db:rehearse": "tsx scripts/rehearse-migrations.ts",
     "release:smoke": "node scripts/release-smoke.mjs",
-    "brand:generate": "tsx scripts/generate-brand-assets.mjs"
+    "brand:generate": "tsx scripts/generate-brand-assets.mjs",
+    "portfolio:capture": "tsx scripts/capture-portfolio.mjs"
   },
   "dependencies": {
     "next": "16.4.2",

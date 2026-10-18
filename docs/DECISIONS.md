@@ -2,11 +2,10 @@
 
 ## Scope and architecture
 
-- One Next.js App Router application and repository. Frontend and server responsibilities stay separate. PostgreSQL, Prisma and private Supabase Storage are configured in Step 1; Supabase Auth application flows follow in Step 2.
-- Step 0 includes only the minimum Next.js setup needed for static screens. Step 1 remains incomplete until database, migrations, seed, environment setup and quality configuration are verified.
+- One Next.js App Router application and repository. Frontend and server responsibilities stay separate; Supabase Auth, private Storage and Prisma/PostgreSQL serve the implemented review workflow. See [architecture](ARCHITECTURE.md) for the current request paths.
 - English interface; warm neutral workspace, restrained sage accent, image-first review canvas. Sample artwork is original CSS typography and shapes, with no external client assets.
 - Initial screens: project list, desktop asset review and responsive mobile comment drawer.
-- All current people, projects, comments, counts and artwork are explicitly sample data. Prototype filters, version selection, zoom, thread selection and resolve toggles only affect local component state. No saved approval, upload, authentication or invitations.
+- Private workspaces persist real project data. The public demo uses isolated guest records and original fictional artwork. The unused Step 0 prototype component was removed after the implemented routes replaced it; its earlier behavior remains in Git history.
 
 ## Roles
 
@@ -24,29 +23,30 @@ Historical versions are read only, including replies and resolve actions. Share 
 
 ## Implementation clarifications
 
-- Create the Activity model and transactional event writer when the first domain event needs it. Step 8 adds the feed and unread markers.
+- Activity events are written in the same transaction as their domain change; the feed keeps per-user unread high-water marks.
 - READY storage objects must be immutable. Upload permission must not allow overwriting a finalized object; verify this before implementing uploads.
 - Version publish order follows successful serialized finalization, not upload initiation. A retry must not republish an older finalized version as current.
-- Model upload sessions, guest demo sessions and per-project/user read markers when those steps begin.
+- Upload sessions, guest demo sessions and per-project/user read markers have separate persistence and permission rules.
 - Before member management ships, define owner transfer, last-owner protection, removal and immediate permission revocation. Already-issued signed URLs remain usable until expiry.
 - Demo requires session creation throttling, write caps, resource ceilings and scheduled scoped cleanup, beyond individual comment quotas.
 
 ## Routes
 
-- `/`: static prototype entry; future public landing page.
-- Prototype project/review navigation currently lives in local UI state. It does not claim real authenticated routes.
-- Future public: `/login`, `/auth/callback`, `/demo`, `/share/[token]`, `/invite/[token]`.
-- Future signed in: `/app/[workspaceId]/projects`, `/app/[workspaceId]/projects/[projectId]`, `/app/[workspaceId]/projects/[projectId]/assets/[assetId]`.
+- `/`: public landing page; `/login` and `/signup`: Auth entry.
+- `/auth/google` and `/auth/callback`: Google/PKCE flow; `/auth/[operation]`: same-origin Auth mutations.
+- `/demo`: isolated guest review UI, with session/state handlers below that path.
+- `/share` and `/invite`: fragment-token entry. Scoped cookies then authorize `/share/view/[shareId]` and `/invite/accept`; raw tokens are not route segments.
+- `/app`: workspace redirect; `/app/[workspaceId]/projects`, `/app/[workspaceId]/projects/[projectId]`, `/app/[workspaceId]/projects/[projectId]/assets/[assetId]`: signed-in project and review routes.
 
 ## Backlog
 
-MVP: verified identity, assigned projects, private image upload, persistent normalized pins and threads, immutable versions, per-client decisions, invitations, expiring read-only shares, activity, isolated demo, verification and deployment preparation.
+Implemented MVP: verified identity, assigned projects, private image upload, persistent normalized pins and threads, immutable versions, per-client decisions, invitations, expiring read-only shares, activity, isolated demo and deployment configuration.
 
 Later: video/PDF, AI summaries, billing, realtime presence, email delivery, visual diffs, custom domains and mobile applications.
 
 ## Open verification
 
-The 30–60 second comprehension check needs a human walkthrough. Real-device and keyboard/browser checks must be recorded when performed. No automatic publication, production changes or external communications.
+The public release passed 17 anonymous automated checks. The owner reports completing the live release checklist; those reports are separate from agent-run checks. No load benchmark or production restore rehearsal is established. Historical implementation records below describe what was known at each step; references to the old development Supabase project must not be used to authorize current production fixtures. See [progress](PROGRESS.md) for the latest record.
 
 ## Step 1 foundation
 

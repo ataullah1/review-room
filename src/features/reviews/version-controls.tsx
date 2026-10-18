@@ -4,8 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VersionPage, VersionView } from "./types";
 import { Button } from "@/components/ui/button";
-const label = (v: VersionView) =>
-  `Version ${v.versionNumber} · ${v.uploader} · ${new Date(v.createdAt).toLocaleString("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC`;
+
+function versionLabel(version: VersionView) {
+  const uploadedAt = new Date(version.createdAt).toLocaleString("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  });
+  return `Version ${version.versionNumber} · ${version.uploader} · ${uploadedAt} UTC`;
+}
+
 export function VersionControls({
   base,
   currentId,
@@ -39,7 +47,7 @@ export function VersionControls({
     [pending, setPending] = useState(false),
     [error, setError] = useState("");
   const router = useRouter();
-  async function more() {
+  async function loadOlderVersions() {
     setPending(true);
     setError("");
     try {
@@ -75,7 +83,7 @@ export function VersionControls({
         >
           {versions.map((v) => (
             <option key={v.id} value={v.id}>
-              {label(v)}
+              {versionLabel(v)}
               {v.id === currentId ? " · Current" : ""}
             </option>
           ))}
@@ -93,7 +101,7 @@ export function VersionControls({
             .filter((v) => v.id !== selected.id)
             .map((v) => (
               <option key={v.id} value={v.id}>
-                {label(v)}
+                {versionLabel(v)}
               </option>
             ))}
         </select>
@@ -116,7 +124,11 @@ export function VersionControls({
         </Link>
       )}
       {next && (
-        <button className="version-text-link" disabled={pending} onClick={more}>
+        <button
+          className="version-text-link"
+          disabled={pending}
+          onClick={loadOlderVersions}
+        >
           {pending ? "Loading…" : "Load older versions"}
         </button>
       )}

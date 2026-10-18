@@ -1,8 +1,10 @@
-# Release preparation — rreviewroom.vercel.app
+# Release operations — rreviewroom.vercel.app
 
 Prepared 18 October 2026. Target: **https://rreviewroom.vercel.app**. The owner confirmed that **pwzwrknnzkdagfcjnqkr** now serves the live application; earlier documents calling it development describe historical checks. Treat it as production from this point onward.
 
-This change prepares the repository. It does not commit, push, change Dashboard settings, run hosted migrations, create production fixtures, deploy, take a backup or prove a restore. GitHub CLI is not logged in, no Vercel CLI/project link or management tokens are present. At inspection, `/` returned 200 with the older homepage and `/demo` returned 404. The existing deployment does not yet match this repository. The read-only release smoke runner failed all 11 new-release expectations against that older deployment; do not describe those checks as passed live.
+**Current status:** the owner deployed the updated application through the connected GitHub/Vercel project. All 17 anonymous release checks passed on the live domain on 18 October 2026. The owner reports completing the follow-up login/Google, review workflow, phone, Search Console and operational setup checks. These reports do not establish an agent-run authenticated journey, production restore rehearsal or Google indexing. The agent has not changed Dashboard settings, pushed, deployed or created production fixtures during this handoff.
+
+**Historical baseline:** before that deployment, the older homepage lacked the demo link and `/demo` returned 404; all 11 then-current release checks failed. That earlier result is superseded by the 17 passing live checks above, rather than erased from the verification history. The instructions below remain the setup and operations reference for future releases.
 
 ## 1. Set Production environment variables before pushing
 
@@ -124,7 +126,7 @@ For an application regression, use **Vercel → Deployments → the last known g
 
 ## 7. Final acceptance after the new deployment
 
-- [ ] `pnpm release:smoke` passes on the public domain; its local Production-build run passed before deployment.
+- [x] `pnpm release:smoke`: all 17 anonymous checks passed on the public domain on 18 October 2026.
 - [ ] Existing-owner email/password login, logout and private-route denial work with Secure cookies and the live origin.
 - [ ] A deliberate immediate-signup check creates one profile, workspace and OWNER membership; retry does not duplicate it. Do not use the old fixture runner against production.
 - [ ] Google button completes real consent → Supabase callback → app callback → workspace on the final domain.

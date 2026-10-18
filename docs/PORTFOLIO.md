@@ -1,51 +1,88 @@
 # Review Room — Visual Review and Client Approval
 
-Independent concept project. Draft for portfolio use after the release checklist passes; not a commissioned client engagement. Do not invent customers, testimonials, revenue, usage metrics or performance results.
+An independent concept project for keeping image feedback, revisions and client decisions together.
 
-**Short description:** An image review workspace with pinned feedback, version comparison and client approvals.
+[Live application](https://rreviewroom.vercel.app) · [Interactive demo](https://rreviewroom.vercel.app/demo) · [Source](https://github.com/ataullah1/review-room)
 
-**Live application:** https://rreviewroom.vercel.app
+![Review Room homepage with original sample artwork](screenshots/01-landing.webp)
 
-**Interactive demo:** https://rreviewroom.vercel.app/demo — the route must be available after the pending release; it returned 404 on the older deployment inspected on 18 October 2026.
+## The problem
 
-**Repository:** https://github.com/ataullah1/review-room
+A message like “move this a little to the left” loses meaning when it sits several messages away from the image. Once a second file arrives, it also becomes unclear which feedback still applies and which version someone approved.
 
-## Case-study draft
+I built Review Room around those two questions: **which detail?** and **which version?** A pin answers the first; version-specific threads and decisions answer the second.
 
-Creative review becomes difficult when feedback, image versions and approval decisions are scattered across messages. Review Room explores a focused alternative: place a comment on an image detail, discuss it in a thread, compare an immutable revision, and record each assigned client's decision on that specific version.
+## My role and scope
 
-My role covers the product interface and full-stack implementation, developed with AI-assisted tooling. The interface uses an English review workflow with an image canvas, normalized pins, threaded replies, a mobile feedback drawer and explicit current/historical version controls. Original fictional demo artwork illustrates the workflow without exposing private client work.
+My work covers the interface, data model, server workflows and deployment setup, developed with AI-assisted tooling. I chose a small image-review workflow rather than trying to reproduce a full project-management suite. The stack is Next.js, React, TypeScript, Prisma/PostgreSQL, Supabase Auth and private Storage.
 
-The application uses Next.js/React/TypeScript, Supabase Auth and private Storage, and Prisma/PostgreSQL. Email/password and Google OAuth use server-verified identities and cookie-based sessions. An owner can see all projects in their workspace; designers and clients see assigned projects. Server authorization is paired with PostgreSQL RLS and non-bypass request roles. Private image requests recheck access; the browser-facing Data API has no app-table grants.
+This is a portfolio project, not a commissioned client engagement. All three demo designs are original fictional artwork. There are no customer, revenue or adoption claims.
 
-Pins store ratios within the displayed image instead of screen pixels, so resizing and zooming can map feedback back to the same detail. New versions have separate comments and decisions; a previous approval does not become approval of a revision. Client decisions are individual version decisions, not a fabricated universal project sign-off. Upload validation decodes actual bytes, rejects invalid/animated/oversized images, preserves immutable originals and serves bounded, metadata-free previews to the review UI. New portrait uploads record EXIF-oriented geometry.
+## Put feedback beside the detail
 
-Invitations are email-bound and project-scoped. Anonymous shares expose a fixed image version and read-only feedback through expiring, revocable capabilities. Tokens are exchanged out of URL fragments into path-scoped HttpOnly cookies. A separate 24-hour guest demo allows Designer/Client view switching within isolated sample data, with durable quotas and confirmed reset; it cannot upload, invite or access real workspaces. Project activity and independent per-user unread markers complete the review loop.
+The main screen gives most of the space to the image, with a thread beside it. Clicking an image creates a normalized position; the pin stays with that detail as the canvas changes size. Threads separate the original observation from follow-up replies. Designers can resolve a discussion without deleting its history.
 
-The verification work includes unit and local PostgreSQL permission/concurrency tests, headless browser review journeys, responsive viewport checks and an empty-database migration rehearsal. Release configuration adds production/Preview isolation, same-origin fonts, indexing exclusions and authenticated bounded cleanup. An original image-frame/feedback-pin mark, matching browser/device icons and a static social card carry the sage/cream identity across public, Auth and workspace screens. These checks are evidence of the behaviors exercised; they are not a security certification or a load benchmark.
+![Pinned feedback and its conversation](screenshots/02-pinned-feedback.webp)
 
-**Limits to state honestly:** no physical-device test or completed final-domain Google consent was performed by the agent; the prepared release still needs a new deployment and live acceptance of the owner's Dashboard configuration. No production throughput, backup restoration, cron execution, paid customer outcome or email-delivery claim is established. Private review previews are generated per request, so server decode/Storage cost still needs hosted measurement. Search Console ownership verification, sitemap submission and indexing have not been performed by the agent.
+On narrow screens the feedback follows the image. The private review workspace also has a feedback drawer, so navigation and comments do not squeeze the canvas into an unusable strip. Keyboard focus, retry states and preserving a draft after a failed save are part of that workflow.
 
-## 60–90 second walkthrough storyboard
+<img src="screenshots/05-mobile-feedback.webp" width="390" alt="Mobile demo: an image pin and its selected feedback thread" />
 
-| Time   | Screen/action                                     | Suggested narration                                                                                        |
-| ------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 0–10s  | Landing → Try demo                                | “Review Room keeps image feedback, revisions and client decisions in one place.”                           |
-| 10–25s | Sample design → pin → thread/reply                | “Feedback stays attached to the detail it describes, with a conversation beside it.”                       |
-| 25–40s | Version selector → side-by-side comparison        | “Each revision keeps its own discussion. Previous approval does not silently carry forward.”               |
-| 40–55s | Switch demo Client view → request changes/approve | “Assigned clients can leave a decision on the current version. This demo switch affects sample data only.” |
-| 55–70s | Mobile drawer / read-only share                   | “The same review works on smaller screens, while shared links stay read only and version scoped.”          |
-| 70–85s | Reset confirmation → overview                     | “Visitors can explore their own temporary demo without changing anyone else's work.”                       |
+## Keep earlier reviews intact
 
-Record only after these controls work on the final deployment. Use the original fictional sample assets, hide developer tooling and never show secret keys, bearer links, private comments or real account information. No video has been recorded by this task.
+Uploading a revision creates an immutable version. Earlier files, comments and decisions remain attached to the earlier version. A historical view is read only, and the new version needs a fresh client review.
 
-## Screenshot checklist
+![Two sample image versions compared side by side](screenshots/03-version-comparison.webp)
 
-1. Public landing at desktop width with Try demo.
-2. Demo canvas with one visible pin and its thread.
-3. Version comparison with two visibly different originals.
-4. Client decision state on the current sample version.
-5. Mobile feedback view at 390px.
-6. Optional architecture figure explaining Auth → server authorization → request-role RLS → private file access.
+The comparison view keeps both images' aspect ratios intact. A client's decision records their own review of a particular version; it does not pretend that one approval represents everyone assigned to the project.
 
-Use truthful captions such as “Independent concept”, “Original sample artwork” and “Individual client decisions”. Avoid “enterprise ready”, “fully secure”, made-up conversion numbers or implying the sample designs came from paying clients. Existing development screenshots are verification artifacts, not a finished marketing asset pack.
+![A seeded client approval for the sample Journal design](screenshots/04-client-review.webp)
+
+## Keep access explicit
+
+Owners manage projects in their workspace. Designers and clients see assigned projects. Each private request verifies the identity on the server, checks resource access and performs database work under transaction-scoped PostgreSQL RLS. Browser roles cannot query application tables directly.
+
+Image access follows the same permission boundary. Originals live in a private bucket; the UI receives authorized, metadata-free previews. Invitations are email-bound, and read-only shares expose one fixed version with expiry and revocation. Owners send invitation links themselves.
+
+The public demo uses separate expiring guest records, so visitors can explore without seeing real projects. Its Designer/Client switch affects sample state only. Reset preserves lifetime quotas rather than becoming a way to bypass them.
+
+## Technical choices I can explain
+
+| Choice                     | Reason and tradeoff                                                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| One Next.js app            | UI and server changes ship together. Auth, data and storage still have separate modules.                                          |
+| Normalized pin coordinates | Pins survive responsive resizing. EXIF orientation and displayed image geometry must still agree.                                 |
+| Immutable versions         | Old feedback stays understandable. Publication needs serialization so retries cannot replace a newer current version.             |
+| Server checks plus RLS     | Useful application errors and a database permission boundary. Transactions must carry the correct identity on pooled connections. |
+| Per-request image previews | No shared cache leaking private images. Repeated decoding and Storage reads need measurement at real traffic.                     |
+| PostgreSQL rate counters   | Limits persist across instances without an extra paid service. Atomic updates and cleanup still need care.                        |
+| An isolated guest demo     | A reviewer can try the workflow without an account. Quotas, expiry and cleanup are part of the feature.                           |
+
+The [architecture notes](ARCHITECTURE.md) connect these decisions to the source files.
+
+## Verification and current release
+
+The deployed site passes 17 automated anonymous checks covering public assets, metadata, private-route indexing rules and unauthenticated access rejection. Earlier development checks cover permissions, concurrency, uploads, comments, decisions, invitations, activity and demo isolation. The owner reports completing the live login/Google, review workflow, phone and operational setup checks discussed during release.
+
+The portfolio screenshots show the real local production UI with intercepted seeded demo responses. They do not establish authenticated production behavior. No load benchmark, production restore rehearsal or third-party security certification is claimed. Search Console setup was owner-operated; Google indexing and ranking are not established by a sitemap submission.
+
+## A short introduction for a portfolio card
+
+**Review Room** is an image review workspace with pinned feedback, version comparison and client approvals. I designed and built the interface and full-stack workflow, including private uploads, project permissions, expiring shares and an isolated public demo.
+
+**Tags:** Next.js · TypeScript · PostgreSQL · Supabase · Prisma
+
+**Links:** [Live app](https://rreviewroom.vercel.app) · [Try demo](https://rreviewroom.vercel.app/demo) · [GitHub](https://github.com/ataullah1/review-room)
+
+## 75-second walkthrough script
+
+| Time   | What to show                                    | Narration                                                                                                                                                                         |
+| ------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0–10s  | Landing → Try demo                              | “Review Room gives creative work a place to be reviewed. The demo uses three original sample designs, so you can explore without an account.”                                     |
+| 10–25s | Select a pin and its thread                     | “A comment belongs to a detail in the image. The pin stays in the same relative position as the canvas changes size, and replies keep the conversation together.”                 |
+| 25–40s | Compare versions → return to feedback           | “Each revision keeps its own feedback. Side-by-side comparison shows what changed, while the earlier version stays read only. An old approval does not carry over to a new file.” |
+| 40–55s | Switch to Client view; inspect Journal approval | “Assigned clients can approve a version or request changes with a note. Each person's decision is separate. This role switch changes only the guest demo.”                        |
+| 55–67s | Mobile feedback                                 | “The review adapts to smaller screens. Real projects use server-checked assignments and private image storage; the public demo stays separate from that data.”                    |
+| 67–75s | Return to overview                              | “I built Review Room to keep feedback specific, preserve revision history and make the next review step clear.”                                                                   |
+
+The script is ready for recording; no narrated video has been recorded. Use only the fictional demo, keep developer tools closed and do not expose private links or credentials. See the [screenshot gallery](screenshots/README.md) for the five prepared stills and how to regenerate them.

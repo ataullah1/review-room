@@ -1,0 +1,12 @@
+{
+  "capturedAt": "2026-10-18T04:34:01.849Z",
+  "source": "Local production UI with intercepted seeded demo responses",
+  "backendWrites": false,
+  "images": [
+    "01-landing.webp",
+    "02-pinned-feedback.webp",
+    "03-version-comparison.webp",
+    "04-client-review.webp",
+    "05-mobile-feedback.webp"
+  ]
+}

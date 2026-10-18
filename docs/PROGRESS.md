@@ -12,8 +12,17 @@
 - [x] Step 7 Invitation and share links — focused authorization/rate tests and live invitation/share/revoke flow verified on 17 October 2026
 - [x] Step 8 Activity — atomic events, persistent unread state, focused tests and browser flow verified on 17 October 2026
 - [x] Step 9 Isolated demo — isolated guests, quotas, cleanup and browser flow verified on 18 October 2026
-- [x] Step 10 Verification and polish — automated/browser matrix complete on 18 October 2026; physical-phone and interactive Google checks remain manual
-- [x] Step 11 Release preparation and portfolio draft — code/local checks complete; production Dashboard configuration, redeploy and live acceptance remain manual
+- [x] Step 10 Verification and polish — automated/browser matrix complete on 18 October 2026; owner later reported completing the live phone/Google checks
+- [x] Step 11 Release and portfolio package — live anonymous checks passed; owner reported manual acceptance; case study/screenshots/script prepared, narrated recording remains separate
+
+## Portfolio handoff and readability cleanup (18 October 2026)
+
+- After the owner deployed the Prisma build fix, all 17 anonymous `pnpm release:smoke` checks passed against the live domain. The owner then reported completing the proposed manual login/Google, review workflow, phone, Search Console and operational setup checks. These are owner reports, not new agent-run authenticated or Dashboard checks. No production restore rehearsal or Google indexing is established.
+- Rewrote the README around the implemented workflow, live/demo links, development prerequisites, commands and repository map. Replaced stale prototype/Step 2 and pending-deployment descriptions in current docs while retaining dated historical records. Added [ARCHITECTURE.md](ARCHITECTURE.md) with a request-flow diagram, source links and implementation tradeoffs.
+- Finalized [PORTFOLIO.md](PORTFOLIO.md): problem, role, interface decisions, version/permission model, limits, ready-to-use project-card copy and a 75-second narration script. Preserved the existing AI-assisted tooling attribution and original fictional-work designation. No narrated video or external portfolio publication was performed.
+- Created five optimized WebP presentation screenshots for landing, pinned feedback, comparison, client review and mobile. Added [capture instructions and provenance](screenshots/README.md), a timestamped capture manifest and `pnpm portfolio:capture`. Capture runs only against loopback, intercepts seeded demo session/view responses, blocks backend writes and suppresses workspace prefetch. Its approved Journal state already exists in the seed. It uses an isolated temporary Chrome profile and contacts no production backend.
+- Removed the unused 650-line Step 0 prototype component after confirming there were no imports. Kept the current product screens and their styles. Expanded dense activity/rate-limit/demo-cleanup SQL without changing parameter binding, locks or predicates; replaced nested quota ternaries with named scope settings; made activity/version helper names clearer. This was a focused maintainability pass, not a rewrite or a claim that every source line was manually authored.
+- Validation: the 20 affected local PostgreSQL integration cases for activity, sharing quotas and demo cleanup passed. Lint, production build (including TypeScript) and repository formatting passed. Screenshot capture succeeded without horizontal overflow and all five images were inspected. Thirty relative documentation/image links resolved. No new dependency, schema change, production fixture, migration, staging, commit, push or deployment.
 
 ## Vercel missing Prisma Client build fix (18 October 2026)
 
