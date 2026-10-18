@@ -11,10 +11,12 @@ export const metadata = {
   referrer: "no-referrer" as const,
 };
 export default async function Page() {
+  // Establish request-time rendering before a missing deployment setting can fail.
+  const requestHeaders = await headers();
   let preview, user;
   try {
     const db = getDb();
-    await limitCapability(db, await headers(), "read");
+    await limitCapability(db, requestHeaders, "read");
     const token = (await cookies()).get("rr_invite")?.value;
     if (!token) throw new AccessError("Open your invitation link again.", 404);
     preview = await withCapabilityDatabase(db, (tx) =>

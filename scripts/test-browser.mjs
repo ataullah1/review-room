@@ -1,14 +1,8 @@
 import { config } from "dotenv";
 config({ path: ".env", quiet: true });
-// This acceptance runner creates and removes its own fixtures in the known
-// development Supabase project. It never runs against production or a live host.
-if (
-  process.env.NEXT_PUBLIC_SUPABASE_URL !==
-  "https://pwzwrknnzkdagfcjnqkr.supabase.co"
-)
-  throw new Error(
-    "Browser acceptance requires the designated development Supabase project.",
-  );
+// The old test project is now production: refuse all hosted fixture writes there.
+import { assertHostedTestTarget } from "../src/lib/config/deployment.ts";
+assertHostedTestTarget();
 import { createRequire } from "node:module";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -17,13 +11,6 @@ const require = createRequire(import.meta.url),
   { Client } = require("pg"),
   sharp = require("sharp");
 const dbUrl = new URL(process.env.DIRECT_URL);
-if (
-  dbUrl.username !== "postgres.pwzwrknnzkdagfcjnqkr" &&
-  dbUrl.hostname !== "db.pwzwrknnzkdagfcjnqkr.supabase.co"
-)
-  throw new Error(
-    "Browser acceptance requires the designated development database.",
-  );
 dbUrl.searchParams.delete("schema");
 dbUrl.searchParams.delete("pgbouncer");
 const db = new Client({

@@ -1,6 +1,31 @@
 import Link from "next/link";
 import Image from "next/image";
 import { demoAssets } from "@/features/demo/catalog";
+import type { Metadata } from "next";
+import {
+  productionOrigin,
+  isProductionDeployment,
+} from "@/lib/config/deployment";
+export const metadata: Metadata = {
+  title: "Review Room — Visual Review and Client Approval",
+  description:
+    "An image review workspace with pinned feedback, version comparison and client approvals. Explore the interactive demo without signing in.",
+  alternates: { canonical: productionOrigin },
+  robots: { index: isProductionDeployment(), follow: isProductionDeployment() },
+  openGraph: {
+    type: "website",
+    siteName: "Review Room",
+    url: productionOrigin,
+    title: "Review Room — Visual Review and Client Approval",
+    description:
+      "Pinned feedback, version comparison and client approvals for creative projects.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Review Room",
+    description: "Visual review and client approval for creative projects.",
+  },
+};
 export default function Page() {
   return (
     <main className="landing">

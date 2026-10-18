@@ -26,7 +26,9 @@
     "supabase:check": "tsx scripts/check-supabase.ts",
     "uploads:cleanup": "tsx scripts/cleanup-uploads.ts",
     "demo:cleanup": "tsx scripts/cleanup-demo.ts",
-    "test:browser": "node scripts/test-browser.mjs"
+    "test:browser": "node scripts/test-browser.mjs",
+    "db:rehearse": "tsx scripts/rehearse-migrations.ts",
+    "release:smoke": "node scripts/release-smoke.mjs"
   },
   "dependencies": {
     "next": "16.4.2",

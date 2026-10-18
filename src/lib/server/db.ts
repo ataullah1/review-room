@@ -1,7 +1,8 @@
 import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@/generated/prisma/client";
-import { readDatabaseEnvironment } from "@/lib/config/environment";
+import { assertPreviewIsolation } from "../config/deployment";
+import { databaseConnectionOptions } from "../config/database-connection";
 
 const globalForPrisma = globalThis as unknown as {
   reviewRoomPrisma?: PrismaClient;
@@ -13,6 +14,7 @@ let productionClient: PrismaClient | undefined;
 // Construct only when a server feature asks for the database. Static pages and
 // production builds do not require a database or establish connections.
 export function getDb() {
+  assertPreviewIsolation();
   const schema = JSON.stringify(
     Object.entries(Prisma)
       .filter(([key]) => key.endsWith("ScalarFieldEnum"))
@@ -30,11 +32,7 @@ export function getDb() {
     globalForPrisma.reviewRoomPrisma = undefined;
   }
   if (productionClient) return productionClient;
-  const { DATABASE_URL } = readDatabaseEnvironment();
-  const adapter = new PrismaPg(
-    { connectionString: DATABASE_URL, max: 5, connectionTimeoutMillis: 5_000 },
-    { schema: "app" },
-  );
+  const adapter = new PrismaPg(databaseConnectionOptions(), { schema: "app" });
   const client = new PrismaClient({ adapter });
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.reviewRoomPrisma = client;

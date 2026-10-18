@@ -18,11 +18,12 @@ export default async function Page({
 }: {
   params: Promise<{ shareId: string }>;
 }) {
+  const requestHeaders = await headers();
   let data;
   const { shareId } = await params;
   try {
     const db = getDb();
-    await limitCapability(db, await headers(), "read");
+    await limitCapability(db, requestHeaders, "read");
     const token = (await cookies()).get("rr_share")?.value;
     if (!token) throw new AccessError("Open the full share link again.", 404);
     data = await withCapabilityDatabase(db, async (tx) => ({

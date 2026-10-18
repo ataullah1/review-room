@@ -9,12 +9,23 @@ const capabilityHeaders = [
 ];
 const nextConfig = {
   async headers() {
-    return ["/invite/:path*", "/share/:path*", "/demo/:path*"].map(
-      (source) => ({
+    const privateHeaders = [
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+      { key: "Referrer-Policy", value: "no-referrer" },
+    ];
+    return [
+      ...[
+        "/app/:path*",
+        "/auth/:path*",
+        "/api/:path*",
+        "/login",
+        "/signup",
+      ].map((source) => ({ source, headers: privateHeaders })),
+      ...["/invite/:path*", "/share/:path*", "/demo/:path*"].map((source) => ({
         source,
         headers: capabilityHeaders,
-      }),
-    );
+      })),
+    ];
   },
 };
 

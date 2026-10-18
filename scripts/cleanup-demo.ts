@@ -1,17 +1,13 @@
 import { config } from "dotenv";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { readDatabaseEnvironment } from "../src/lib/config/environment";
 import { cleanupDemoSessions } from "../src/features/demo/cleanup";
+import { databaseConnectionOptions } from "../src/lib/config/database-connection";
 config({ path: ".env", quiet: true });
 async function main() {
-  const { DATABASE_URL } = readDatabaseEnvironment(),
-    db = new PrismaClient({
-      adapter: new PrismaPg(
-        { connectionString: DATABASE_URL, connectionTimeoutMillis: 15000 },
-        { schema: "app" },
-      ),
-    });
+  const db = new PrismaClient({
+    adapter: new PrismaPg(databaseConnectionOptions(), { schema: "app" }),
+  });
   try {
     console.log(await cleanupDemoSessions(db));
   } finally {

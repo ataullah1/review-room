@@ -58,3 +58,16 @@ describe("cookie refresh proxy", () => {
     expect(create).not.toHaveBeenCalled();
   });
 });
+
+it("blocks a production-backed Preview before constructing the Supabase SDK", async () => {
+  vi.stubEnv("VERCEL_ENV", "preview");
+  try {
+    const response = await proxy(
+      new NextRequest("https://preview.example.test/login"),
+    );
+    expect(response.status).toBe(503);
+    expect(create).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { assertPreviewIsolation } from "./lib/config/deployment";
+
 export async function proxy(request: NextRequest) {
+  try {
+    assertPreviewIsolation();
+  } catch {
+    return new NextResponse("Preview backend is unavailable.", {
+      status: 503,
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  }
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
