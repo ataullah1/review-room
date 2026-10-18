@@ -24,7 +24,8 @@
     "db:local:stop": "node scripts/local-database.mjs stop",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check",
     "supabase:check": "tsx scripts/check-supabase.ts",
-    "uploads:cleanup": "tsx scripts/cleanup-uploads.ts"
+    "uploads:cleanup": "tsx scripts/cleanup-uploads.ts",
+    "demo:cleanup": "tsx scripts/cleanup-demo.ts"
   },
   "dependencies": {
     "next": "16.4.2",

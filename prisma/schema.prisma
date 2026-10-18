@@ -305,3 +305,20 @@ model ProjectActivityRead {
   @@index([workspaceId, userId])
   @@schema("app")
 }
+
+model DemoSession {
+  id           String   @id @db.Uuid
+  tokenHash    String   @unique @db.Char(64)
+  marker       String   @default("REVIEW_ROOM_DEMO_V1") @db.VarChar(32)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt    DateTime @db.Timestamptz(3)
+  view         String   @default("DESIGNER") @db.VarChar(8)
+  state        Json
+  receipts     Json     @default("{}")
+  commentCount Int      @default(0)
+  actionCount  Int      @default(0)
+  generation   Int      @default(0)
+
+  @@index([marker, expiresAt])
+  @@schema("app")
+}

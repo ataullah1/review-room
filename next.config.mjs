@@ -9,10 +9,12 @@ const capabilityHeaders = [
 ];
 const nextConfig = {
   async headers() {
-    return ["/invite/:path*", "/share/:path*"].map((source) => ({
-      source,
-      headers: capabilityHeaders,
-    }));
+    return ["/invite/:path*", "/share/:path*", "/demo/:path*"].map(
+      (source) => ({
+        source,
+        headers: capabilityHeaders,
+      }),
+    );
   },
 };
 

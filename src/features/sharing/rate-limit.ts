@@ -5,15 +5,15 @@ import { createHash } from "node:crypto";
 export async function consumeCapabilityQuota(
   db: PrismaClient,
   networkHash: string,
-  scope: "exchange" | "read" | "accept",
+  scope: "exchange" | "read" | "accept" | "demo-start",
 ) {
   if (!/^[a-f0-9]{64}$/.test(networkHash))
     throw new AccessError("Link access is temporarily unavailable.", 503);
   const key = createHash("sha256")
       .update(`capability:${scope}:${networkHash}`)
       .digest("hex"),
-    limit = scope === "read" ? 120 : 40,
-    seconds = scope === "read" ? 60 : 600;
+    limit = scope === "demo-start" ? 10 : scope === "read" ? 120 : 40,
+    seconds = scope === "demo-start" ? 3600 : scope === "read" ? 60 : 600;
   const rows = await db.$queryRaw<
     { attempts: number }[]
   >`INSERT INTO app."CapabilityRateBucket"("keyHash",attempts,"expiresAt") VALUES(${key},1,now()+make_interval(secs=>${seconds})) ON CONFLICT("keyHash") DO UPDATE SET attempts=CASE WHEN app."CapabilityRateBucket"."expiresAt"<=now() THEN 1 ELSE app."CapabilityRateBucket".attempts+1 END,"expiresAt"=CASE WHEN app."CapabilityRateBucket"."expiresAt"<=now() THEN now()+make_interval(secs=>${seconds}) ELSE app."CapabilityRateBucket"."expiresAt" END WHERE app."CapabilityRateBucket"."expiresAt"<=now() OR app."CapabilityRateBucket".attempts<${limit} RETURNING attempts`;
@@ -27,7 +27,7 @@ export async function consumeCapabilityQuota(
 export async function limitCapability(
   db: PrismaClient,
   headers: Pick<Headers, "get">,
-  scope: "exchange" | "read" | "accept",
+  scope: "exchange" | "read" | "accept" | "demo-start",
 ) {
   let network: string;
   try {
