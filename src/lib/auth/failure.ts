@@ -24,6 +24,12 @@ type FailureContext = {
 };
 
 const reasons: Record<string, string> = {
+  database_url_missing: "database_url_missing",
+  database_url_empty: "database_url_empty",
+  database_url_assignment: "database_url_assignment",
+  database_url_quoted: "database_url_quoted",
+  database_url_protocol: "database_url_protocol",
+  database_url_invalid: "database_url_invalid",
   "28P01": "database_credentials",
   P1000: "database_credentials",
   AuthenticationFailed: "database_credentials",
@@ -63,8 +69,12 @@ export function authFailureReason(error: unknown): string {
       error.message.startsWith("Configure the Supabase database CA certificate")
     )
       return "database_ca_configuration";
-    if (error.message.startsWith("DATABASE_URL must be configured"))
-      return "database_url_configuration";
+    if (error.message.startsWith("DATABASE_URL must be configured")) {
+      const code = (error as Error & { code?: string }).code;
+      return code && Object.hasOwn(reasons, code)
+        ? reasons[code]
+        : "database_url_configuration";
+    }
     if (error.message === "Supabase Auth configuration is missing.")
       return "auth_configuration";
     if (

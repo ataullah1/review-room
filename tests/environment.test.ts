@@ -3,10 +3,33 @@ import {
   readDatabaseEnvironment,
   readStorageEnvironment,
 } from "../src/lib/config/environment";
+import { authFailureReason } from "../src/lib/auth/failure";
 import { assertLocalDatabase } from "../prisma/local-safety";
 
 const local = "postgresql://review_room_local@127.0.0.1:55432/";
 describe("configuration boundaries", () => {
+  it.each([
+    [undefined, "database_url_missing"],
+    ["  ", "database_url_empty"],
+    ['"postgresql://user:private-secret@host/db"', "database_url_quoted"],
+    [
+      "DATABASE_URL=postgresql://user:private-secret@host/db",
+      "database_url_assignment",
+    ],
+    ["https://host/private-secret", "database_url_protocol"],
+    ["postgresql://[private-secret", "database_url_invalid"],
+  ])(
+    "classifies configuration failures without exposing values",
+    (value, reason) => {
+      try {
+        readDatabaseEnvironment({ DATABASE_URL: value });
+        expect.fail("Expected invalid configuration to fail");
+      } catch (error) {
+        expect(authFailureReason(error)).toBe(reason);
+        expect(String(error)).not.toContain("private-secret");
+      }
+    },
+  );
   it("accepts PostgreSQL and rejects missing/non-database URLs without exposing input", () => {
     expect(
       readDatabaseEnvironment({ DATABASE_URL: `${local}review_room_dev` })

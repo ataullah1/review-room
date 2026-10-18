@@ -21,11 +21,26 @@ export function readDatabaseEnvironment(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ) {
   assertPreviewIsolation(env);
-  const result = z.object({ DATABASE_URL: postgresUrl }).safeParse(env);
+  const value = env.DATABASE_URL;
+  const result = z.object({ DATABASE_URL: postgresUrl }).safeParse({
+    DATABASE_URL: value,
+  });
   if (!result.success) {
     // Never include the invalid value or Zod's input payload in an error.
-    throw new Error(
-      "DATABASE_URL must be configured with a valid PostgreSQL URL. See .env.example.",
+    // Fixed categories distinguish deployment mistakes without exposing any URL.
+    let code = "database_url_invalid";
+    if (value === undefined) code = "database_url_missing";
+    else if (!value.trim()) code = "database_url_empty";
+    else if (/^DATABASE_URL\s*=/.test(value.trim()))
+      code = "database_url_assignment";
+    else if (/^["']/.test(value.trim())) code = "database_url_quoted";
+    else if (!/^postgres(?:ql)?:\/\//.test(value.trim()))
+      code = "database_url_protocol";
+    throw Object.assign(
+      new Error(
+        "DATABASE_URL must be configured with a valid PostgreSQL URL. See .env.example.",
+      ),
+      { code },
     );
   }
   return result.data;
