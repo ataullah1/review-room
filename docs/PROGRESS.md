@@ -292,3 +292,9 @@
 ## Completion rule
 
 Mark a step complete only after its roadmap acceptance checks pass, recording user-authorized scope adjustments. Record checks not performed. Never put credentials, tokens, signed URLs or private client content in this file.
+
+## Production authentication investigation (18 October 2026)
+
+- Production Google initiation returned 503; email/password failure was reported by the owner. Supabase public settings confirmed Google/email enabled and email auto-confirm enabled. The owner's local runtime URL and supplied CA passed verified-TLS database and Prisma/RLS-role reads. This does not establish that Vercel has matching values. The owner reported a new Ready deployment after updating the certificate; successful live sign-in remains unverified.
+- Added secret-safe operation/stage/category diagnostics and correlated public error references to Google initiation and authentication operations. Existing authorization, durable quotas, TLS verification and business logic remain intact. No credentials or raw database exceptions are logged.
+- Validation: 46 focused tests passed; lint, typecheck and Production build passed. A controlled local missing-CA request returned the expected 503 reference and `quota_database` / `database_ca_configuration` log, without connecting to a database or creating accounts. No production fixtures, migration, commit, push or deployment were performed. The owner must deploy these diagnostics to inspect any remaining live failure.

@@ -8,6 +8,7 @@ import { signupNetworkHash } from "@/lib/auth/ip";
 import { reserveSignup, discardSignupPermit } from "@/lib/auth/rate-limit";
 import { bootstrapWithQuota } from "@/lib/data/onboarding";
 import { getDb } from "@/lib/server/db";
+import { authFailure, type AuthStage } from "@/lib/auth/failure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,12 +50,15 @@ export async function POST(
       { error: "Not found." },
       { status: 404, headers: privateHeaders },
     );
+  let stage: AuthStage = "request_body";
   try {
     const input = await readBody(request);
+    stage = "configuration";
     const client = await createAuthClient(true);
     const result = await authenticate(operation as AuthOperation, input, {
       provider: {
         async signUp({ email, password, displayName, permit }) {
+          stage = "signup_provider";
           const { data, error } = await client.auth.signUp({
             email,
             password,
@@ -69,6 +73,7 @@ export async function POST(
           };
         },
         async signIn({ email, password }) {
+          stage = "password_provider";
           const { data, error } = await client.auth.signInWithPassword({
             email,
             password,
@@ -80,18 +85,34 @@ export async function POST(
           };
         },
         async getUser() {
+          stage = "identity_provider";
           const { data, error } = await client.auth.getUser();
           return !error && data.user ? identityFromUser(data.user) : null;
         },
         async signOut() {
+          stage = "logout_provider";
           const { error } = await client.auth.signOut({ scope: "local" });
           return !error;
         },
       },
-      reserveSignup: (email) =>
-        reserveSignup(getDb(), signupNetworkHash(request.headers), email),
-      discardPermit: (permit) => discardSignupPermit(getDb(), permit),
+      reserveSignup: (email) => {
+        stage = "quota_database";
+        return reserveSignup(
+          getDb(),
+          signupNetworkHash(request.headers),
+          email,
+        );
+      },
+      async discardPermit(permit) {
+        try {
+          await discardSignupPermit(getDb(), permit);
+        } catch (error) {
+          stage = "permit_cleanup";
+          throw error;
+        }
+      },
       async assertInstantSignup() {
+        stage = "provider_settings";
         const { url, key } = authConfiguration();
         const response = await fetch(new URL("/auth/v1/settings", url), {
           headers: { apikey: key },
@@ -108,27 +129,26 @@ export async function POST(
             503,
           );
       },
-      bootstrap: (user, reserved) =>
-        bootstrapWithQuota(getDb(), user, request.headers, reserved),
+      bootstrap: (user, reserved) => {
+        stage = "workspace_database";
+        return bootstrapWithQuota(getDb(), user, request.headers, reserved);
+      },
     });
     return NextResponse.json(result, { headers: privateHeaders });
   } catch (error) {
-    const known = error instanceof AuthFlowError;
-    return NextResponse.json(
-      {
-        error: known
-          ? error.message
-          : "Unable to complete this request. Please try again.",
+    const failure = authFailure(error, {
+      operation: operation as AuthOperation,
+      stage,
+      fallback: "Unable to complete this request. Please try again.",
+    });
+    return NextResponse.json(failure.body, {
+      status: failure.status,
+      headers: {
+        ...privateHeaders,
+        ...(failure.retryAfter
+          ? { "Retry-After": String(failure.retryAfter) }
+          : {}),
       },
-      {
-        status: known ? error.status : 503,
-        headers: {
-          ...privateHeaders,
-          ...(known && error.retryAfter
-            ? { "Retry-After": String(error.retryAfter) }
-            : {}),
-        },
-      },
-    );
+    });
   }
 }

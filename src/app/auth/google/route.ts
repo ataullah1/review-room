@@ -11,6 +11,7 @@ import { signupNetworkHash } from "@/lib/auth/ip";
 import { reserveSignup, discardSignupPermit } from "@/lib/auth/rate-limit";
 import { AuthFlowError } from "@/lib/auth/errors";
 import { getDb } from "@/lib/server/db";
+import { authFailure, type AuthStage } from "@/lib/auth/failure";
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
       { error: "Request origin is not allowed." },
       { status: 403, headers },
     );
+  let stage: AuthStage = "configuration";
   try {
     const { url, key } = authConfiguration();
     const callback = new URL(
@@ -29,6 +31,7 @@ export async function POST(request: NextRequest) {
     const result = await beginGoogle({
       supabaseUrl: url,
       async enabled() {
+        stage = "provider_settings";
         const response = await fetch(new URL("/auth/v1/settings", url), {
           headers: { apikey: key },
           cache: "no-store",
@@ -36,14 +39,24 @@ export async function POST(request: NextRequest) {
         });
         return response.ok && (await response.json()).external?.google === true;
       },
-      reserve: () =>
-        reserveSignup(
+      reserve: () => {
+        stage = "quota_database";
+        return reserveSignup(
           getDb(),
           signupNetworkHash(request.headers),
           googleIntentScope,
-        ),
-      discard: (token) => discardSignupPermit(getDb(), token),
+        );
+      },
+      async discard(token) {
+        try {
+          await discardSignupPermit(getDb(), token);
+        } catch (error) {
+          stage = "permit_cleanup";
+          throw error;
+        }
+      },
       async authorize() {
+        stage = "oauth_provider";
         const { data, error } = await client.auth.signInWithOAuth({
           provider: "google",
           options: {
@@ -60,6 +73,7 @@ export async function POST(request: NextRequest) {
         return data.url;
       },
     });
+    stage = "session_cookies";
     (await cookies()).set(
       "rr_auth_next",
       safeReturnPath(request.headers.get("x-review-return-to")),
@@ -80,22 +94,19 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ redirectTo: result.redirectTo }, { headers });
   } catch (error) {
-    const known = error instanceof AuthFlowError;
-    return NextResponse.json(
-      {
-        error: known
-          ? error.message
-          : "Could not start Google sign-in. Please try again.",
+    const failure = authFailure(error, {
+      operation: "google",
+      stage,
+      fallback: "Could not start Google sign-in. Please try again.",
+    });
+    return NextResponse.json(failure.body, {
+      status: failure.status,
+      headers: {
+        ...headers,
+        ...(failure.retryAfter
+          ? { "Retry-After": String(failure.retryAfter) }
+          : {}),
       },
-      {
-        status: known ? error.status : 503,
-        headers: {
-          ...headers,
-          ...(known && error.retryAfter
-            ? { "Retry-After": String(error.retryAfter) }
-            : {}),
-        },
-      },
-    );
+    });
   }
 }
