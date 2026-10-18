@@ -61,7 +61,7 @@ export default async function Page({
         base={base}
         feedbackUrl={`${base}/comments`}
         versionId={version.versionId}
-        imageUrl={`${base}/file`}
+        imageUrl={`${base}/file?preview=1`}
         title={version.title}
         width={version.width}
         height={version.height}

@@ -32,6 +32,8 @@ pnpm format:check
 pnpm build
 # Hosted development configuration, when configured:
 pnpm supabase:check
+# Optional hosted-development browser acceptance; start pnpm dev first (macOS Chrome):
+pnpm test:browser
 ```
 
 ## Structure
@@ -43,7 +45,7 @@ pnpm supabase:check
 - `supabase`: versioned access-hardening and private bucket SQL, separate from Prisma.
 - `tests`: configuration safety and real PostgreSQL integration checks.
 
-Visit `/signup` or `/login` for real Auth and `/app` for your workspaces. The private app supports projects, validated image uploads, version-bound comments/replies, immutable version history, side-by-side comparison and individual assigned-client review decisions. Historical versions are read only; new versions require fresh client review. Owners can also create email-bound project invitations and expiring read-only version links. Project activity shows uploads, feedback, decisions and accepted invitations, with per-user unread state and refresh on focus. Visit `/demo` without login for three original sample designs, version comparison, pinned comments and Designer/Client views. Each signed guest session has isolated data, a 24-hour expiry, reset confirmation and durable write quotas; demo uploads and invitations are disabled. Run `pnpm demo:cleanup` to remove expired demo records. Google Fonts has system fallbacks; demo artwork is original local SVG. Font hosting must be revisited before private client content ships.
+Visit `/signup` or `/login` for real Auth and `/app` for your workspaces. The private app supports projects, validated image uploads, version-bound comments/replies, immutable version history, side-by-side comparison and individual assigned-client review decisions. Private UI images use bounded, metadata-free WebP previews while originals remain immutable. Historical versions are read only; new versions require fresh client review. Owners can also create email-bound project invitations and expiring read-only version links. Project activity shows uploads, feedback, decisions and accepted invitations, with per-user unread state and refresh on focus. Visit `/demo` without login for three original sample designs, version comparison, pinned comments and Designer/Client views. Each signed guest session has isolated data, a 24-hour expiry, reset confirmation and durable write quotas; demo uploads and invitations are disabled. Run `pnpm demo:cleanup` to remove expired demo records. Google Fonts has system fallbacks; demo artwork is original local SVG. Font hosting must be revisited before private client content ships.
 
 - [Roadmap](docs/ROADMAP.md)
 - [Progress and verification](docs/PROGRESS.md)

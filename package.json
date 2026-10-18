@@ -25,7 +25,8 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check",
     "supabase:check": "tsx scripts/check-supabase.ts",
     "uploads:cleanup": "tsx scripts/cleanup-uploads.ts",
-    "demo:cleanup": "tsx scripts/cleanup-demo.ts"
+    "demo:cleanup": "tsx scripts/cleanup-demo.ts",
+    "test:browser": "node scripts/test-browser.mjs"
   },
   "dependencies": {
     "next": "16.4.2",

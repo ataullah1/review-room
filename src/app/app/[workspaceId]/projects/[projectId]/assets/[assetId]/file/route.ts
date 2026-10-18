@@ -5,6 +5,7 @@ import { getUploadStorage } from "@/lib/server/uploads";
 import { withUserDatabase } from "@/lib/data/context";
 import { reviewVersion } from "@/lib/data/comments";
 import { uploadFailure, uploadHeaders } from "@/features/uploads/http";
+import { imagePreview, previewHeaders } from "@/features/uploads/preview";
 export const runtime = "nodejs";
 export async function GET(
   request: Request,
@@ -29,7 +30,16 @@ export async function GET(
         new URL(request.url).searchParams.get("versionId") || undefined,
       ),
     );
-    const signed = await getUploadStorage().signRead(asset.version.objectKey);
+    const storage = getUploadStorage();
+    if (new URL(request.url).searchParams.get("preview") === "1") {
+      const preview = await imagePreview(
+        await storage.read(asset.version.objectKey),
+      );
+      return new Response(new Uint8Array(preview), {
+        headers: { ...uploadHeaders, ...previewHeaders },
+      });
+    }
+    const signed = await storage.signRead(asset.version.objectKey);
     return NextResponse.redirect(signed, {
       status: 307,
       headers: uploadHeaders,

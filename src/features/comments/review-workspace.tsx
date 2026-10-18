@@ -59,11 +59,14 @@ export function ReviewWorkspace({
     [fit, setFit] = useState(600),
     [imageReady, setImageReady] = useState(false),
     [imageError, setImageError] = useState(false),
+    [imageAttempt, setImageAttempt] = useState(0),
     [drawer, setDrawer] = useState(false),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
     [reply, setReply] = useState({ id: "", body: "" });
-  const viewport = useRef<HTMLDivElement>(null),
+  const feedback = useRef<HTMLElement>(null),
+    feedbackTrigger = useRef<HTMLElement | null>(null),
+    viewport = useRef<HTMLDivElement>(null),
     surface = useRef<HTMLDivElement>(null),
     composer = useRef<HTMLTextAreaElement>(null),
     gesture = useRef<{
@@ -100,6 +103,33 @@ export function ReviewWorkspace({
   useEffect(() => {
     if (draft?.id) composer.current?.focus();
   }, [draft?.id]);
+  function openFeedback() {
+    if (!feedback.current?.contains(document.activeElement))
+      feedbackTrigger.current = document.activeElement as HTMLElement | null;
+    setDrawer(true);
+  }
+  useEffect(() => {
+    if (!drawer) return;
+    const mobile = window.matchMedia("(max-width: 700px)");
+    const timer = requestAnimationFrame(() => {
+      if (mobile.matches && !feedback.current?.contains(document.activeElement))
+        feedback.current
+          ?.querySelector<HTMLButtonElement>(".review-drawer-close")
+          ?.focus();
+    });
+    const escape = (event: KeyboardEvent) => {
+      if (mobile.matches && event.key === "Escape") {
+        event.preventDefault();
+        setDrawer(false);
+        feedbackTrigger.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", escape);
+    return () => {
+      cancelAnimationFrame(timer);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [drawer]);
   async function request(url: string, body?: unknown) {
     const response = await fetch(url, {
       ...(body
@@ -120,7 +150,7 @@ export function ReviewWorkspace({
     if (selected) replyDrafts.current[selected] = reply;
     setSelected(id);
     setReply(replyDrafts.current[id] || { id: crypto.randomUUID(), body: "" });
-    setDrawer(true);
+    openFeedback();
     setError("");
   }
   function newDraft(point: ImagePoint) {
@@ -132,7 +162,7 @@ export function ReviewWorkspace({
         : { ...point, id: crypto.randomUUID(), body: "" },
     );
     setSelected(null);
-    setDrawer(true);
+    openFeedback();
     setError("");
   }
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -388,11 +418,15 @@ export function ReviewWorkspace({
             >
               <Image
                 unoptimized
-                src={imageUrl}
+                src={
+                  imageAttempt
+                    ? `${imageUrl}${imageUrl.includes("?") ? "&" : "?"}retry=${imageAttempt}`
+                    : imageUrl
+                }
                 alt={title}
                 width={width}
                 height={height}
-                priority
+                preload
                 draggable={false}
                 onLoad={() => {
                   setImageReady(true);
@@ -437,7 +471,17 @@ export function ReviewWorkspace({
         </div>
         {imageError && (
           <p className="auth-error" role="alert">
-            The image could not load. Refresh to try again.
+            The image could not load. Your feedback draft is kept.
+            <Button
+              variant="outline"
+              onClick={() => {
+                setImageError(false);
+                setImageReady(false);
+                setImageAttempt((attempt) => attempt + 1);
+              }}
+            >
+              Retry image
+            </Button>
           </p>
         )}
         <div className="review-canvas-footer">
@@ -454,7 +498,9 @@ export function ReviewWorkspace({
           </Button>
           <button
             className="review-mobile-comments"
-            onClick={() => setDrawer(true)}
+            aria-label={`Open feedback, ${total} comments`}
+            aria-expanded={drawer}
+            onClick={openFeedback}
           >
             <MessageCircle size={16} />
             {total}
@@ -462,6 +508,7 @@ export function ReviewWorkspace({
         </div>
       </section>
       <aside
+        ref={feedback}
         className={`review-sidebar${drawer ? " is-open" : ""}`}
         aria-label="Image feedback"
       >
@@ -475,7 +522,10 @@ export function ReviewWorkspace({
           <button
             className="review-drawer-close"
             aria-label="Close feedback"
-            onClick={() => setDrawer(false)}
+            onClick={() => {
+              setDrawer(false);
+              feedbackTrigger.current?.focus();
+            }}
           >
             <X size={19} />
           </button>

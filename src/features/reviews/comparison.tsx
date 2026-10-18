@@ -13,7 +13,9 @@ type Pane = {
 function Pane({ base, version }: { base: string; version: Pane }) {
   const viewport = useRef<HTMLDivElement>(null),
     [fit, setFit] = useState(1),
-    [scale, setScale] = useState(1);
+    [scale, setScale] = useState(1),
+    [failed, setFailed] = useState(false),
+    [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const node = viewport.current;
     if (!node) return;
@@ -68,7 +70,9 @@ function Pane({ base, version }: { base: string; version: Pane }) {
         >
           <Image
             unoptimized
-            src={`${base}/file?versionId=${version.id}`}
+            src={`${base}/file?versionId=${version.id}&preview=1&retry=${attempt}`}
+            onLoad={() => setFailed(false)}
+            onError={() => setFailed(true)}
             width={version.width}
             height={version.height}
             alt={`Version ${version.number}`}
@@ -80,6 +84,19 @@ function Pane({ base, version }: { base: string; version: Pane }) {
           />
         </div>
       </div>
+      {failed && (
+        <p className="auth-error" role="alert">
+          This version preview could not load.
+          <button
+            onClick={() => {
+              setFailed(false);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Retry version {version.number}
+          </button>
+        </p>
+      )}
       <footer>
         {version.width} × {version.height} px
         <Link href={`${base}?versionId=${version.id}`}>

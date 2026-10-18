@@ -85,7 +85,7 @@ export async function validateImage(
       throw new UploadError(
         "Animated images are not supported. Choose a static image.",
       );
-    const { width, height } = info;
+    const { width, height } = info.autoOrient;
     if (
       !width ||
       !height ||

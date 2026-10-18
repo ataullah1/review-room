@@ -199,7 +199,7 @@ export function AuthForm({
             {signup ? "Log in" : "Create an account"}
           </Link>
         </p>
-        <Link className="auth-demo-link" href="/">
+        <Link className="auth-demo-link" href="/demo">
           Explore the sample workspace <ArrowRight size={13} />
         </Link>
       </main>

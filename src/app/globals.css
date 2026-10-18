@@ -17,7 +17,7 @@
   --color-destructive: #b14f40;
   --color-border: var(--line);
   --color-input: var(--line);
-  --color-ring: #9bb184;
+  --color-ring: #59734d;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
@@ -25,7 +25,7 @@
 :root {
   --bg: #fafbf9;
   --ink: #25342d;
-  --muted: #7f8981;
+  --muted: #657267;
   --line: #e7ebe5;
   --accent: #59734d;
 }
@@ -61,8 +61,10 @@ button {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 3px solid #9bb184;
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #59734d;
   outline-offset: 4px;
 }
 a {
@@ -2211,7 +2213,7 @@ h1 > span {
   outline: none;
 }
 .project-archive-form > button:focus-visible {
-  outline: 3px solid #9bb184;
+  outline: 3px solid #59734d;
 }
 .project-archive-form > .auth-error,
 .project-archive-form > .project-success {
@@ -2317,7 +2319,7 @@ h1 > span {
   background: #f2f6ec;
 }
 .upload-dropzone:focus-within {
-  outline: 3px solid #9bb184;
+  outline: 3px solid #59734d;
   outline-offset: 4px;
 }
 .upload-dropzone strong {
@@ -2646,7 +2648,7 @@ h1 > span {
   gap: 5px;
 }
 .review-canvas-footer .outline:focus-visible {
-  outline: 3px solid #9bb184;
+  outline: 3px solid #59734d;
 }
 .review-mobile-comments {
   display: none;
@@ -3694,7 +3696,7 @@ h1 > span {
   gap: 10px;
   margin-bottom: 20px;
   font-size: 11px;
-  color: #829074;
+  color: #657257;
 }
 .demo-session-bar > div {
   display: flex;
@@ -3908,7 +3910,7 @@ h1 > span {
   margin-left: 5px;
 }
 .demo-feedback > p {
-  color: #829074;
+  color: #657257;
   font-size: 12px;
   line-height: 1.8;
   margin-bottom: 18px;
@@ -3978,7 +3980,7 @@ h1 > span {
 .demo-thread-heading small {
   margin-left: auto;
   font-size: 10px;
-  color: #829074;
+  color: #657257;
 }
 .demo-thread p,
 .demo-decision > p {
@@ -4007,7 +4009,7 @@ h1 > span {
   margin-top: 12px;
 }
 .demo-hint {
-  color: #829074;
+  color: #657257;
 }
 .demo-comparison {
   display: grid;
@@ -4027,7 +4029,7 @@ h1 > span {
   background: white;
 }
 .demo-footnote {
-  color: #829074;
+  color: #657257;
   font-size: 11px;
   line-height: 1.8;
   padding: 24px 0;

@@ -156,7 +156,7 @@ export default async function ReviewPage({
           key={version.id}
           base={base}
           versionId={version.id}
-          imageUrl={`${base}/file?versionId=${version.id}`}
+          imageUrl={`${base}/file?versionId=${version.id}&preview=1`}
           title={asset.title}
           width={version.width!}
           height={version.height!}

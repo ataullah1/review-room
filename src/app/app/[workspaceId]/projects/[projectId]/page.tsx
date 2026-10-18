@@ -85,7 +85,7 @@ export default async function ProjectPage({
               <div className="asset-thumbnail">
                 <Image
                   unoptimized
-                  src={`/app/${workspaceId}/projects/${projectId}/assets/${asset.id}/file`}
+                  src={`/app/${workspaceId}/projects/${projectId}/assets/${asset.id}/file?preview=1`}
                   alt={asset.title}
                   width={asset.currentVersion!.width!}
                   height={asset.currentVersion!.height!}
