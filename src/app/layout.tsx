@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "@/components/brand.css";
-import { productionOrigin } from "@/lib/config/deployment";
+import {
+  productionOrigin,
+  isProductionDeployment,
+} from "@/lib/config/deployment";
+import { SiteAnalytics } from "@/components/site-analytics";
 export const metadata: Metadata = {
   metadataBase: new URL(productionOrigin),
   applicationName: "Review Room",
@@ -30,7 +34,10 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {isProductionDeployment() && <SiteAnalytics />}
+      </body>
     </html>
   );
 }

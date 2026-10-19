@@ -137,3 +137,9 @@ For an application regression, use **Vercel → Deployments → the last known g
 - [ ] Backup/restore and private Storage export coverage are established; the independent production/Preview credentials remain separated.
 
 These are user-run release checks on intended accounts/content, not permission to create test fixture batches or send invitations to external recipients. No email delivery, real phone, successful final-domain Google callback, production CA connection, scheduled cron execution or backup restoration is claimed by this preparation.
+
+## Web Analytics
+
+Public pageviews for `/`, `/login` and `/signup` use `@vercel/analytics/next`. Query strings and fragments are stripped before sending pageviews; custom events and private, capability and demo routes are excluded. Tracking is mounted only on production deployments. No Analytics environment variable or custom event setup is required.
+
+In Vercel, open the Review Room project → Analytics / Web Analytics → Enable, then deploy the updated code. Visit the production homepage and check the dashboard for incoming pageviews. Dashboard activation and receipt of live events must be verified separately from the build. See the [official quickstart](https://vercel.com/docs/analytics/quickstart).
