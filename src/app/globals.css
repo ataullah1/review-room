@@ -4113,3 +4113,14 @@ h1 > span {
     min-height: 320px;
   }
 }
+
+.reviewer-demo-notice {
+  margin: 16px 24px 0;
+  padding: 14px 18px;
+  border: 1px solid #dce3d6;
+  border-radius: 8px;
+  background: #f4f6ed;
+  color: #40513c;
+  font-size: 12px;
+  line-height: 1.8;
+}

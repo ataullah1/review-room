@@ -8,18 +8,30 @@ import {
 import { projectDirectory, assignableMembers } from "@/lib/data/projects";
 import { projectFilters } from "@/features/projects/validation";
 import { listAssets } from "@/lib/data/uploads";
+import { isExistingDemoEmail } from "@/features/reviewer-demo/config";
 import { getDb } from "./db";
 
 export async function getUserWorkspaces() {
   const user = await requireUser();
-  return withUserDatabase(getDb(), user.id, async (tx) => ({
-    user,
-    memberships: await tx.membership.findMany({
-      where: { userId: user.id },
-      include: { workspace: true },
-      orderBy: { createdAt: "asc" },
-    }),
-  }));
+  return withUserDatabase(getDb(), user.id, async (tx) => {
+    const demo = isExistingDemoEmail(user.email)
+      ? await tx.reviewerDemoAccount.findUnique({
+          where: { userId: user.id },
+          select: { workspaceId: true },
+        })
+      : null;
+    return {
+      user,
+      memberships: await tx.membership.findMany({
+        where: {
+          userId: user.id,
+          ...(demo ? { workspaceId: demo.workspaceId } : {}),
+        },
+        include: { workspace: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    };
+  });
 }
 export async function getWorkspaceProjects(
   workspaceId: string,

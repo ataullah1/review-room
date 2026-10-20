@@ -19,27 +19,29 @@ enum WorkspaceRole {
 model UserProfile {
   // Equals a verified Supabase Auth user ID after Step 2.
   // Local seed identities are fixtures and cannot sign in.
-  id              String                @id @db.Uuid
-  displayName     String                @db.VarChar(100)
-  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
-  memberships     Membership[]
-  assetVersions   AssetVersion[]
-  comments        Comment[]
-  reviewDecisions ReviewDecision[]
-  activityReads   ProjectActivityRead[]
-  ownedWorkspace  Workspace?            @relation("WorkspaceCreator")
+  id                  String                @id @db.Uuid
+  displayName         String                @db.VarChar(100)
+  createdAt           DateTime              @default(now()) @db.Timestamptz(3)
+  memberships         Membership[]
+  assetVersions       AssetVersion[]
+  comments            Comment[]
+  reviewDecisions     ReviewDecision[]
+  activityReads       ProjectActivityRead[]
+  reviewerDemoAccount ReviewerDemoAccount?
+  ownedWorkspace      Workspace?            @relation("WorkspaceCreator")
 
   @@schema("app")
 }
 
 model Workspace {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String       @db.VarChar(100)
-  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
-  memberships Membership[]
-  projects    Project[]
-  createdById String?      @unique @db.Uuid
-  creator     UserProfile? @relation("WorkspaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  id                   String                @id @default(uuid()) @db.Uuid
+  name                 String                @db.VarChar(100)
+  createdAt            DateTime              @default(now()) @db.Timestamptz(3)
+  memberships          Membership[]
+  projects             Project[]
+  createdById          String?               @unique @db.Uuid
+  reviewerDemoAccounts ReviewerDemoAccount[]
+  creator              UserProfile?          @relation("WorkspaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@schema("app")
 }
@@ -320,5 +322,28 @@ model DemoSession {
   generation   Int      @default(0)
 
   @@index([marker, expiresAt])
+  @@schema("app")
+}
+
+// Account registry only; authorization roles remain in Membership.
+model ReviewerDemoAccount {
+  userId            String      @id @db.Uuid
+  workspaceId       String      @db.Uuid
+  legacyWorkspaceId String?     @db.Uuid
+  allowAuthChanges  Boolean     @default(false)
+  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
+  user              UserProfile @relation(fields: [userId], references: [id], onDelete: Restrict)
+  workspace         Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId])
+  @@schema("app")
+}
+
+model ReviewerDemoQuota {
+  userId    String   @id @db.Uuid
+  day       DateTime @db.Timestamptz(3)
+  mutations Int      @default(0)
+  uploads   Int      @default(0)
+
   @@schema("app")
 }

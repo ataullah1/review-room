@@ -41,10 +41,10 @@ async function main() {
       const rows = await check.query(
         "SELECT tablename,rowsecurity FROM pg_tables WHERE schemaname='app' AND tablename<>'_prisma_migrations'",
       );
-      if (rows.rowCount !== 17 || rows.rows.some((row) => !row.rowsecurity))
+      if (rows.rowCount !== 19 || rows.rows.some((row) => !row.rowsecurity))
         throw new Error("Rehearsal schema/RLS mismatch.");
       console.log(
-        "Empty local database: all migrations applied; 17 application tables have RLS. No seed or hosted writes.",
+        "Empty local database: all migrations applied; 19 application tables have RLS. No seed or hosted writes.",
       );
     } finally {
       await check.end();

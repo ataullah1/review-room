@@ -75,6 +75,6 @@ export async function finishGoogle(
       "Google sign-in did not finish. Please try again.",
       401,
     );
-  const workspace = await deps.bootstrap(user);
-  return `/app/${workspace.id}/projects`;
+  await deps.bootstrap(user);
+  return "/app";
 }

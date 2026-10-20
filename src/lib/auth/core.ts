@@ -85,7 +85,7 @@ export async function authenticate(
   // Always verify through the Auth server, never trust a cookie/getSession user.
   const user = await deps.provider.getUser();
   if (!user) throw new AuthFlowError("Please sign in to continue.", 401);
-  const workspace = await deps.bootstrap(user, operation === "signup");
+  await deps.bootstrap(user, operation === "signup");
   const next =
     input &&
     typeof input === "object" &&
@@ -94,6 +94,6 @@ export async function authenticate(
       ? safeReturnPath(input.next)
       : "/app";
   return {
-    redirectTo: next === "/app" ? `/app/${workspace.id}/projects` : next,
+    redirectTo: next,
   };
 }

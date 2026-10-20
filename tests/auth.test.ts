@@ -31,7 +31,7 @@ describe("authentication flow", () => {
     const deps = dependencies();
     expect(
       await authenticate("signup", { ...input, role: "OWNER" }, deps),
-    ).toEqual({ redirectTo: "/app/workspace-id/projects" });
+    ).toEqual({ redirectTo: "/app" });
     expect(deps.reserveSignup).toHaveBeenCalledWith(input.email);
     expect(deps.provider.signUp).toHaveBeenCalledWith({
       ...input,
@@ -79,7 +79,16 @@ describe("authentication flow", () => {
   });
   it("logs in using a fresh verified user and handles invalid credentials", async () => {
     const deps = dependencies();
-    await authenticate("login", input, deps);
+    expect(await authenticate("login", input, deps)).toEqual({
+      redirectTo: "/app",
+    });
+    expect(
+      await authenticate(
+        "login",
+        { ...input, next: "/app/shared/projects" },
+        deps,
+      ),
+    ).toEqual({ redirectTo: "/app/shared/projects" });
     expect(deps.provider.getUser).toHaveBeenCalled();
     expect(deps.reserveSignup).not.toHaveBeenCalled();
     deps.provider.signIn.mockResolvedValue({ error: true, hasSession: false });

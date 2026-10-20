@@ -62,7 +62,7 @@ describe("Google OAuth", () => {
   });
   it("verifies the provider user before idempotent bootstrap", async () => {
     const deps = finishDeps();
-    expect(await finishGoogle(input, deps)).toBe("/app/workspace/projects");
+    expect(await finishGoogle(input, deps)).toBe("/app");
     expect(deps.exchange).toHaveBeenCalledWith("pkce-code");
     expect(deps.bootstrap).toHaveBeenCalledWith({ id: "verified-google-id" });
   });

@@ -24,6 +24,14 @@ The homepage has its own interactive review preview: choose a sample design, swi
 
 The marketing page includes the review workflow, feature examples, use cases, privacy/collaboration details and an accessible FAQ. It adapts down to 320px, supports keyboard interaction and respects reduced-motion preferences.
 
+## Multi-role reviewer environment
+
+The optional reviewer setup uses three real Supabase accounts: **Creator Demo → OWNER**, **Designer Demo → DESIGNER**, and **Client Demo → CLIENT**. They share an Olive Café workspace with V1/V2 designs, pinned client feedback, designer responses, change requests and approvals. Creator sees three projects; Designer and Client see the assigned Olive Café and Forma projects. The Studio Notes project remains owner-only.
+
+On the existing backend, after the three manually created demo accounts are seeded, `/login` shows intentional public demo credentials, password reveal/copy controls and role-specific autofill. The existing login/session flow and application screens are used. Public accounts cannot alter shared workspace/project structure or invite outsiders; review actions and uploads have durable limits.
+
+Login opens the workspace chooser, then visitors select the demo workspace and a project. This is separate from the signup-free `/demo` sandbox. The explicit operator script seeds only the three owner-authorized accounts on the existing backend. See [DEMO_SETUP.md](DEMO_SETUP.md) for installation, restoration, limits and verification.
+
 ## How it is built
 
 One Next.js App Router application serves the UI and backend. Supabase supplies Auth and private Storage; Prisma's PostgreSQL adapter handles application data.

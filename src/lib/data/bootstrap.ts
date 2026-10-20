@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client";
+import { isExistingDemoEmail } from "../../features/reviewer-demo/config";
 import { withUserDatabase } from "./context";
 
 export type VerifiedIdentity = {
@@ -20,6 +21,29 @@ export async function bootstrapWorkspace(
       update: {},
       create: { id: user.id, displayName },
     });
+    const demo = isExistingDemoEmail(user.email)
+      ? await tx.reviewerDemoAccount.findUnique({
+          where: { userId: user.id },
+          select: { workspaceId: true },
+        })
+      : null;
+    if (demo) {
+      const membership = await tx.membership.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId: demo.workspaceId,
+            userId: user.id,
+          },
+        },
+      });
+      if (!membership)
+        throw new Error(
+          "Demo membership is missing. Ask the demo operator to restore the seed.",
+        );
+      return tx.workspace.findUniqueOrThrow({
+        where: { id: demo.workspaceId },
+      });
+    }
     const existing = await tx.workspace.findUnique({
       where: { createdById: user.id },
     });

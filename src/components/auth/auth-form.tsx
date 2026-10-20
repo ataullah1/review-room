@@ -1,19 +1,24 @@
 "use client";
 import { Brand } from "@/components/brand";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DemoAccounts } from "./demo-accounts";
+import type { PublicDemoAccount } from "@/features/reviewer-demo/config";
 
 export function AuthForm({
   mode,
   next,
   initialError = "",
+  demoAccounts = [],
 }: {
   mode: "signup" | "login";
   next?: string;
   initialError?: string;
+  demoAccounts?: PublicDemoAccount[];
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState(initialError);
   const [pending, setPending] = useState(false);
   const signup = mode === "signup";
@@ -133,7 +138,7 @@ export function AuthForm({
         <div className="auth-divider">
           <span>or continue with email</span>
         </div>
-        <form onSubmit={submit} aria-busy={pending}>
+        <form ref={formRef} onSubmit={submit} aria-busy={pending}>
           {signup && (
             <label>
               Your name
@@ -197,10 +202,40 @@ export function AuthForm({
             {signup ? "Log in" : "Create an account"}
           </Link>
         </p>
+        {!signup && demoAccounts.length === 3 && (
+          <a className="auth-demo-link" href="#demo-accounts-title">
+            Choose a reviewer demo role <ArrowRight size={13} />
+          </a>
+        )}
         <Link className="auth-demo-link" href="/demo">
           Explore the sample workspace <ArrowRight size={13} />
         </Link>
       </main>
+      {!signup && demoAccounts.length === 3 && (
+        <DemoAccounts
+          accounts={demoAccounts}
+          disabled={pending}
+          onSelect={(account) => {
+            const form = formRef.current;
+            if (!form) return;
+            (form.elements.namedItem("email") as HTMLInputElement).value =
+              account.email;
+            (form.elements.namedItem("password") as HTMLInputElement).value =
+              account.password;
+            setError("");
+            form.scrollIntoView({
+              block: "center",
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "auto"
+                : "smooth",
+            });
+            (
+              form.querySelector('button[type="submit"]') as HTMLButtonElement
+            )?.focus({ preventScroll: true });
+          }}
+        />
+      )}
     </div>
   );
 }
