@@ -7,6 +7,7 @@ import { getDb } from "@/lib/server/db";
 import { withUserDatabase } from "@/lib/data/context";
 import { decisionPage, submitDecision } from "@/lib/data/reviews";
 import { boundedInteger } from "@/features/comments/validation";
+import { mutationFailure } from "@/lib/server/diagnostics";
 const headers = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "Cookie",
@@ -14,26 +15,31 @@ const headers = {
 type Context = {
   params: Promise<{ workspaceId: string; projectId: string; assetId: string }>;
 };
-function failure(error: unknown) {
-  return NextResponse.json(
-    {
-      error:
-        error instanceof AccessError
-          ? error.message
-          : error instanceof ZodError
-            ? "Choose a decision and provide a note when requesting changes."
-            : "Could not load or save the review. Please try again.",
-    },
-    {
-      status:
-        error instanceof AccessError
-          ? error.status
-          : error instanceof ZodError
-            ? 400
-            : 503,
-      headers,
-    },
-  );
+function failure(error: unknown, operation = "decision") {
+  if (error instanceof AccessError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: error.status, headers },
+    );
+  }
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      {
+        error: "Choose a decision and provide a note when requesting changes.",
+      },
+      { status: 400, headers },
+    );
+  }
+  const result = mutationFailure(error, {
+    domain: "reviews",
+    operation,
+    stage: "decision_store",
+    fallback: "Could not load or save the review. Please try again.",
+  });
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers,
+  });
 }
 export const runtime = "nodejs";
 export async function GET(request: Request, context: Context) {
@@ -57,7 +63,7 @@ export async function GET(request: Request, context: Context) {
       { headers },
     );
   } catch (error) {
-    return failure(error);
+    return failure(error, "read");
   }
 }
 export async function POST(request: Request, context: Context) {
@@ -96,6 +102,6 @@ export async function POST(request: Request, context: Context) {
     );
     return NextResponse.json({ decision }, { headers });
   } catch (error) {
-    return failure(error);
+    return failure(error, "read");
   }
 }

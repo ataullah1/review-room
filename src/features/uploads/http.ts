@@ -1,6 +1,11 @@
 import { ZodError } from "zod";
 import { AccessError } from "../../lib/auth/errors";
 import { UploadError } from "./validation";
+import {
+  mutationFailure,
+  type MutationFailureContext,
+} from "../../lib/server/diagnostics";
+
 export const uploadHeaders = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "Cookie",
@@ -29,7 +34,11 @@ export async function readUploadJson(request: Request): Promise<unknown> {
     throw new UploadError("Invalid request.");
   }
 }
-export function uploadFailure(error: unknown) {
+export function uploadFailure(
+  error: unknown,
+  context?: Partial<MutationFailureContext>,
+  log?: (line: string) => void,
+) {
   if (error instanceof AccessError || error instanceof UploadError)
     return { error: error.message, status: error.status };
   if (error instanceof ZodError)
@@ -37,8 +46,21 @@ export function uploadFailure(error: unknown) {
       error: "Choose a JPG, PNG or static WebP of 10 MB or less.",
       status: 400,
     };
+  const failure = mutationFailure(
+    error,
+    {
+      domain: "uploads",
+      operation: context?.operation || "upload",
+      stage: context?.stage || "storage",
+      fallback:
+        context?.fallback ||
+        "Could not complete this upload. Please try again.",
+    },
+    log,
+  );
   return {
-    error: "Could not complete this upload. Please try again.",
-    status: 503,
+    error: failure.body.error,
+    status: failure.status,
+    requestId: failure.body.requestId,
   };
 }

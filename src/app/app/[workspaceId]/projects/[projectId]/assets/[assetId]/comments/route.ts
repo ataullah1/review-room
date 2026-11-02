@@ -15,6 +15,7 @@ import {
   boundedInteger,
   commentMutation,
 } from "@/features/comments/validation";
+import { mutationFailure } from "@/lib/server/diagnostics";
 const headers = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "Cookie",
@@ -22,26 +23,29 @@ const headers = {
 type Context = {
   params: Promise<{ workspaceId: string; projectId: string; assetId: string }>;
 };
-function failure(error: unknown) {
-  return NextResponse.json(
-    {
-      error:
-        error instanceof AccessError
-          ? error.message
-          : error instanceof ZodError
-            ? "Check your comment and pin position."
-            : "Could not load or save feedback. Please try again.",
-    },
-    {
-      status:
-        error instanceof AccessError
-          ? error.status
-          : error instanceof ZodError
-            ? 400
-            : 503,
-      headers,
-    },
-  );
+function failure(error: unknown, operation = "comment") {
+  if (error instanceof AccessError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: error.status, headers },
+    );
+  }
+  if (error instanceof ZodError) {
+    return NextResponse.json(
+      { error: "Check your comment and pin position." },
+      { status: 400, headers },
+    );
+  }
+  const result = mutationFailure(error, {
+    domain: "comments",
+    operation,
+    stage: "comment_store",
+    fallback: "Could not load or save feedback. Please try again.",
+  });
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers,
+  });
 }
 export const runtime = "nodejs";
 export async function GET(request: Request, context: Context) {
@@ -78,7 +82,7 @@ export async function GET(request: Request, context: Context) {
     );
     return NextResponse.json(data, { headers });
   } catch (error) {
-    return failure(error);
+    return failure(error, "read");
   }
 }
 export async function POST(request: Request, context: Context) {
@@ -139,6 +143,6 @@ export async function POST(request: Request, context: Context) {
     );
     return NextResponse.json({ comment }, { headers });
   } catch (error) {
-    return failure(error);
+    return failure(error, "read");
   }
 }

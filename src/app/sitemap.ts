@@ -1,10 +1,8 @@
 import type { MetadataRoute } from "next";
-import {
-  isProductionDeployment,
-  productionOrigin,
-} from "@/lib/config/deployment";
+import { isProductionDeployment, readAppOrigin } from "@/lib/config/deployment";
 export default function sitemap(): MetadataRoute.Sitemap {
+  const origin = readAppOrigin();
   return isProductionDeployment()
-    ? [{ url: productionOrigin, changeFrequency: "monthly", priority: 1 }]
+    ? [{ url: origin, changeFrequency: "monthly", priority: 1 }]
     : [];
 }

@@ -186,10 +186,14 @@ describe("upload HTTP boundary", () => {
       ),
     ).rejects.toMatchObject({ status: 413 });
   });
-  it("does not expose unknown provider/database error strings", () => {
-    expect(uploadFailure(new Error("sensitive-provider-error"))).toEqual({
-      status: 503,
-      error: "Could not complete this upload. Please try again.",
-    });
+  it("does not expose unknown provider/database error strings and adds a safe reference", () => {
+    const failure = uploadFailure(new Error("sensitive-provider-error"));
+    expect(failure.status).toBe(503);
+    expect(failure.error).toContain(
+      "Could not complete this upload. Please try again.",
+    );
+    expect(failure.error).toContain("Reference:");
+    expect(failure.error).not.toContain("sensitive-provider-error");
+    expect(failure.requestId).toMatch(/^[a-f0-9-]{36}$/);
   });
 });

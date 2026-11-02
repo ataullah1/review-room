@@ -1,11 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { ZodError } from "zod";
 import { requireUser } from "@/lib/auth/user";
 import { requireSameOrigin } from "@/lib/auth/validation";
 import { AccessError } from "@/lib/auth/errors";
 import { withUserDatabase } from "@/lib/data/context";
+import { actionFailure } from "@/lib/server/diagnostics";
 import {
   createProject,
   updateProjectMembers,
@@ -65,13 +65,11 @@ export async function mutateProject(
       projectId: result.id,
     };
   } catch (error) {
-    if (error instanceof ZodError)
-      return {
-        error: error.issues[0]?.message || "Check your project details.",
-      };
-    if (error instanceof AccessError) return { error: error.message };
-    return {
-      error: "Could not save your changes. Please refresh and try again.",
-    };
+    return actionFailure(error, {
+      domain: "projects",
+      operation,
+      stage: "mutate_project",
+      fallback: "Could not save your changes. Please refresh and try again.",
+    });
   }
 }

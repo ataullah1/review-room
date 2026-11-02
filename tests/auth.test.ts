@@ -17,6 +17,7 @@ function dependencies() {
     provider: {
       signUp: vi.fn().mockResolvedValue({ error: false, hasSession: true }),
       signIn: vi.fn().mockResolvedValue({ error: false, hasSession: true }),
+      resendVerification: vi.fn().mockResolvedValue({ error: false }),
       getUser: vi.fn().mockResolvedValue(user),
       signOut: vi.fn().mockResolvedValue(true),
     },
@@ -69,13 +70,60 @@ describe("authentication flow", () => {
     ).rejects.toMatchObject({ status: 400 });
     expect(deps.reserveSignup).not.toHaveBeenCalled();
   });
-  it("rejects no-session signup results rather than claiming immediate login", async () => {
+  it("returns pending verification on no-session signup rather than claiming immediate login", async () => {
     const deps = dependencies();
     deps.provider.signUp.mockResolvedValue({ error: false, hasSession: false });
-    await expect(authenticate("signup", input, deps)).rejects.toMatchObject({
+    const result = await authenticate("signup", input, deps);
+    expect(result).toEqual({
+      pendingVerification: true,
+      email: input.email,
+    });
+    expect(deps.bootstrap).not.toHaveBeenCalled();
+  });
+  it("rejects login when email confirmation is pending", async () => {
+    const deps = dependencies();
+    deps.provider.signIn.mockResolvedValue({
+      error: true,
+      hasSession: false,
+      unconfirmed: true,
+    });
+    await expect(authenticate("login", input, deps)).rejects.toMatchObject({
+      status: 403,
+      message: expect.stringContaining("confirm your email"),
+    });
+  });
+  it("rejects no-session login results", async () => {
+    const deps = dependencies();
+    deps.provider.signIn.mockResolvedValue({ error: false, hasSession: false });
+    await expect(authenticate("login", input, deps)).rejects.toMatchObject({
       status: 503,
     });
     expect(deps.bootstrap).not.toHaveBeenCalled();
+  });
+  it("supports resending signup verification emails", async () => {
+    const deps = dependencies();
+    deps.provider.resendVerification = vi
+      .fn()
+      .mockResolvedValue({ error: false });
+    const result = await authenticate("resend", { email: input.email }, deps);
+    expect(result).toEqual({
+      ok: true,
+      message: "If an account exists, a verification link has been sent.",
+    });
+    expect(deps.provider.resendVerification).toHaveBeenCalledWith({
+      email: input.email,
+    });
+  });
+  it("rate limits resend requests", async () => {
+    const deps = dependencies();
+    deps.provider.resendVerification = vi
+      .fn()
+      .mockResolvedValue({ error: true, rateLimited: true });
+    await expect(
+      authenticate("resend", { email: input.email }, deps),
+    ).rejects.toMatchObject({
+      status: 429,
+    });
   });
   it("logs in using a fresh verified user and handles invalid credentials", async () => {
     const deps = dependencies();

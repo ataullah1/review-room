@@ -30,7 +30,9 @@ export default async function LoginPage({
       initialError={
         error === "callback"
           ? "Google sign-in did not finish. Please try again."
-          : undefined
+          : error === "verification"
+            ? "The verification link is invalid or has expired. Please sign in or request a new link."
+            : undefined
       }
     />
   );

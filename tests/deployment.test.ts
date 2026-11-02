@@ -3,10 +3,16 @@ import { describe, it, expect, vi } from "vitest";
 import {
   assertPreviewIsolation,
   assertHostedTestTarget,
+  assertHostedProjectConsistency,
   databaseBelongsToProject,
+  extractSupabaseProjectRef,
   isProductionDeployment,
+  readAppOrigin,
+  readProtectedProductionProjectRef,
   productionOrigin,
   productionSupabaseRef,
+  defaultProductionOrigin,
+  ownerProductionSupabaseRef,
 } from "../src/lib/config/deployment";
 import { maintenanceResponse } from "../src/features/maintenance/handler";
 import {
@@ -79,6 +85,95 @@ describe("deployment isolation", () => {
     expect(() => assertHostedTestTarget({})).toThrow();
     expect(() =>
       assertPreviewIsolation({ VERCEL_ENV: "production" }),
+    ).not.toThrow();
+  });
+  it("resolves canonical app origin and rejects missing/invalid production origins without leaking input", () => {
+    expect(readAppOrigin({})).toBe(defaultProductionOrigin);
+    expect(
+      readAppOrigin({ NEXT_PUBLIC_APP_URL: "https://buyer.agency.example" }),
+    ).toBe("https://buyer.agency.example");
+    expect(
+      readAppOrigin({
+        NEXT_PUBLIC_APP_URL: "https://buyer.agency.example/extra/path",
+      }),
+    ).toBe("https://buyer.agency.example");
+    expect(() =>
+      readAppOrigin({ VERCEL_ENV: "production", NEXT_PUBLIC_APP_URL: "" }),
+    ).toThrow("NEXT_PUBLIC_APP_URL must be configured for production");
+    try {
+      readAppOrigin({ NEXT_PUBLIC_APP_URL: "not-a-valid-url-secret" });
+      expect.fail("Expected invalid origin to fail");
+    } catch (error) {
+      expect(String(error)).not.toContain("secret");
+      expect((error as { code?: string }).code).toBe("app_url_invalid");
+    }
+  });
+  it("protects custom buyer production projects in preview and test environments", () => {
+    const customRef = "1234567890abcdefghij";
+    expect(
+      readProtectedProductionProjectRef({
+        PRODUCTION_SUPABASE_PROJECT_REF: customRef,
+      }),
+    ).toBe(customRef);
+    expect(readProtectedProductionProjectRef({})).toBe(
+      ownerProductionSupabaseRef,
+    );
+    expect(() =>
+      readProtectedProductionProjectRef({
+        PRODUCTION_SUPABASE_PROJECT_REF: "too-short",
+      }),
+    ).toThrow("20-character");
+
+    // Preview rejects buyer's configured production backend
+    expect(() =>
+      assertPreviewIsolation({
+        ...preview,
+        PRODUCTION_SUPABASE_PROJECT_REF: customRef,
+        PREVIEW_SUPABASE_PROJECT_REF: customRef,
+      }),
+    ).toThrow("Production access is disabled");
+
+    // Hosted test runner rejects buyer's configured production backend
+    expect(() =>
+      assertHostedTestTarget({
+        ...preview,
+        PRODUCTION_SUPABASE_PROJECT_REF: customRef,
+        HOSTED_TEST_PROJECT_REF: customRef,
+      }),
+    ).toThrow("live project is protected");
+  });
+  it("enforces consistent DB and Auth project pairing in hosted modes", () => {
+    const otherRef = "zyxwvutsrqponmlkjihg";
+    expect(extractSupabaseProjectRef(`https://${ref}.supabase.co`)).toBe(ref);
+    expect(
+      extractSupabaseProjectRef("https://not-supabase.example.com"),
+    ).toBeNull();
+
+    // Mismatched DB and Auth in production throws
+    expect(() =>
+      assertHostedProjectConsistency({
+        VERCEL_ENV: "production",
+        NEXT_PUBLIC_SUPABASE_URL: `https://${ref}.supabase.co`,
+        DATABASE_URL: `postgresql://postgres.${otherRef}:pass@aws-0.pooler.supabase.com:6543/postgres`,
+      }),
+    ).toThrow("Deployed DATABASE_URL does not match");
+
+    // Matching DB and Auth in production succeeds
+    expect(() =>
+      assertHostedProjectConsistency({
+        VERCEL_ENV: "production",
+        NEXT_PUBLIC_SUPABASE_URL: `https://${ref}.supabase.co`,
+        DATABASE_URL: `postgresql://postgres.${ref}:pass@aws-0.pooler.supabase.com:6543/postgres`,
+      }),
+    ).not.toThrow();
+
+    // Local development does not reject mixed local DB + hosted Auth
+    expect(() =>
+      assertHostedProjectConsistency({
+        NEXT_PUBLIC_SUPABASE_URL: `https://${ref}.supabase.co`,
+        DATABASE_URL:
+          "postgresql://review_room_local@127.0.0.1:55432/review_room_dev?schema=app",
+      }),
     ).not.toThrow();
   });
 });

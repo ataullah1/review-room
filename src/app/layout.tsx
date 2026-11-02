@@ -1,13 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "@/components/brand.css";
-import {
-  productionOrigin,
-  isProductionDeployment,
-} from "@/lib/config/deployment";
+import { readAppOrigin, isProductionDeployment } from "@/lib/config/deployment";
 import { SiteAnalytics } from "@/components/site-analytics";
 export const metadata: Metadata = {
-  metadataBase: new URL(productionOrigin),
+  metadataBase: new URL(readAppOrigin()),
   applicationName: "Review Room",
   manifest: "/site.webmanifest",
   appleWebApp: { capable: false, title: "Review Room" },

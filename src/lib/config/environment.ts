@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { assertPreviewIsolation } from "./deployment";
+import {
+  assertHostedProjectConsistency,
+  assertPreviewIsolation,
+} from "./deployment";
 
 const postgresUrl = z
   .string()
@@ -21,6 +24,7 @@ export function readDatabaseEnvironment(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ) {
   assertPreviewIsolation(env);
+  assertHostedProjectConsistency(env);
   const value = env.DATABASE_URL;
   const result = z.object({ DATABASE_URL: postgresUrl }).safeParse({
     DATABASE_URL: value,
@@ -50,6 +54,7 @@ export function readStorageEnvironment(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ) {
   assertPreviewIsolation(env);
+  assertHostedProjectConsistency(env);
   const result = z
     .object({
       NEXT_PUBLIC_SUPABASE_URL: z.url(),

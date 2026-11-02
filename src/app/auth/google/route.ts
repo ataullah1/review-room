@@ -12,6 +12,7 @@ import { reserveSignup, discardSignupPermit } from "@/lib/auth/rate-limit";
 import { AuthFlowError } from "@/lib/auth/errors";
 import { getDb } from "@/lib/server/db";
 import { authFailure, type AuthStage } from "@/lib/auth/failure";
+import { readAppOrigin } from "@/lib/config/deployment";
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
@@ -23,10 +24,7 @@ export async function POST(request: NextRequest) {
   let stage: AuthStage = "configuration";
   try {
     const { url, key } = authConfiguration();
-    const callback = new URL(
-      "/auth/callback",
-      process.env.NEXT_PUBLIC_APP_URL!,
-    );
+    const callback = new URL("/auth/callback", readAppOrigin());
     const client = await createAuthClient(true);
     const result = await beginGoogle({
       supabaseUrl: url,

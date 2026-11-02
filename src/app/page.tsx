@@ -28,10 +28,7 @@ import { ReviewShowcase } from "@/features/marketing/review-showcase";
 import styles from "@/features/marketing/marketing.module.css";
 
 import type { Metadata } from "next";
-import {
-  productionOrigin,
-  isProductionDeployment,
-} from "@/lib/config/deployment";
+import { readAppOrigin, isProductionDeployment } from "@/lib/config/deployment";
 
 const headingFont = localFont({
   src: "../../public/fonts/manrope-latin-variable.woff2",
@@ -40,53 +37,62 @@ const headingFont = localFont({
   weight: "200 800",
 });
 
-export const metadata: Metadata = {
-  title: "Review Room — Visual Review and Client Approval",
-  description:
-    "An image review workspace with pinned feedback, version comparison and client approvals. Explore the interactive demo without signing in.",
-  alternates: { canonical: productionOrigin },
-  ...(process.env.GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
-    : {}),
-  robots: { index: isProductionDeployment(), follow: isProductionDeployment() },
-  openGraph: {
-    type: "website",
-    images: [
-      {
-        url: "/brand/social-preview.png",
-        width: 1200,
-        height: 630,
-        alt: "Review Room — a little feedback, a better result. Image pins, version comparison and client approvals.",
-      },
-    ],
-    siteName: "Review Room",
-    url: productionOrigin,
+export function generateMetadata(): Metadata {
+  const origin = readAppOrigin();
+  return {
     title: "Review Room — Visual Review and Client Approval",
     description:
-      "Pinned feedback, version comparison and client approvals for creative projects.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    images: [
-      {
-        url: "/brand/social-preview.png",
-        alt: "Review Room visual review and client approval workspace",
-      },
-    ],
-    title: "Review Room",
-    description: "Visual review and client approval for creative projects.",
-  },
-};
-const siteIdentity = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": `${productionOrigin}/#website`,
-  name: "Review Room",
-  url: productionOrigin,
-  inLanguage: "en",
-  description:
-    "An image review workspace with pinned feedback, version comparison and client approvals.",
-};
+      "An image review workspace with pinned feedback, version comparison and client approvals. Explore the interactive demo without signing in.",
+    alternates: { canonical: origin },
+    ...(process.env.GOOGLE_SITE_VERIFICATION
+      ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+      : {}),
+    robots: {
+      index: isProductionDeployment(),
+      follow: isProductionDeployment(),
+    },
+    openGraph: {
+      type: "website",
+      images: [
+        {
+          url: "/brand/social-preview.png",
+          width: 1200,
+          height: 630,
+          alt: "Review Room — a little feedback, a better result. Image pins, version comparison and client approvals.",
+        },
+      ],
+      siteName: "Review Room",
+      url: origin,
+      title: "Review Room — Visual Review and Client Approval",
+      description:
+        "Pinned feedback, version comparison and client approvals for creative projects.",
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [
+        {
+          url: "/brand/social-preview.png",
+          alt: "Review Room visual review and client approval workspace",
+        },
+      ],
+      title: "Review Room",
+      description: "Visual review and client approval for creative projects.",
+    },
+  };
+}
+
+function getSiteIdentity(origin: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${origin}/#website`,
+    name: "Review Room",
+    url: origin,
+    inLanguage: "en",
+    description:
+      "An image review workspace with pinned feedback, version comparison and client approvals.",
+  };
+}
 const questions = [
   {
     question: "Can I try it without creating an account?",
@@ -121,6 +127,7 @@ const questions = [
 ];
 
 export default function Page() {
+  const siteIdentity = getSiteIdentity(readAppOrigin());
   return (
     <div className={`${headingFont.variable} ${styles.page}`}>
       <script

@@ -1,9 +1,7 @@
 import type { MetadataRoute } from "next";
-import {
-  isProductionDeployment,
-  productionOrigin,
-} from "@/lib/config/deployment";
+import { isProductionDeployment, readAppOrigin } from "@/lib/config/deployment";
 export default function robots(): MetadataRoute.Robots {
+  const origin = readAppOrigin();
   return isProductionDeployment()
     ? {
         rules: {
@@ -20,7 +18,7 @@ export default function robots(): MetadataRoute.Robots {
             "/demo",
           ],
         },
-        sitemap: `${productionOrigin}/sitemap.xml`,
+        sitemap: `${origin}/sitemap.xml`,
       }
     : { rules: { userAgent: "*", disallow: "/" } };
 }

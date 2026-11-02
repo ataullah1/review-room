@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { randomUUID } from "node:crypto";
 import {
-  productionOrigin,
+  readAppOrigin,
   productionSupabaseRef,
 } from "../../src/lib/config/deployment";
 import { publicDemoAccounts } from "../../src/features/reviewer-demo/config";
@@ -19,7 +19,7 @@ async function main() {
   )
     throw new Error("Reviewer demo backend mismatch.");
   const accounts = publicDemoAccounts();
-  const origin = new URL(productionOrigin);
+  const origin = new URL(readAppOrigin());
   const base = `/app/${demoWorkspaceId}/projects/${demoProjects[0].id}/assets/${demoId("olive-identity")}`;
   const versionId = demoId("olive-identity:v2");
   const request = (path: string, cookie = "", method = "GET", body?: unknown) =>

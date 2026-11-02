@@ -59,6 +59,22 @@ describe("configuration boundaries", () => {
       }),
     ).toThrow("storage is not configured");
   });
+  it("rejects mismatched database and storage project targets in deployed environments", () => {
+    const deployedMismatch = {
+      VERCEL_ENV: "production",
+      NEXT_PUBLIC_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",
+      DATABASE_URL:
+        "postgresql://postgres.zyxwvutsrqponmlkjihg:pass@aws-0.pooler.supabase.com:6543/postgres",
+      SUPABASE_SECRET_KEY: "secret",
+      SUPABASE_STORAGE_BUCKET: "review-room-private",
+    };
+    expect(() => readDatabaseEnvironment(deployedMismatch)).toThrow(
+      "Deployed DATABASE_URL does not match",
+    );
+    expect(() => readStorageEnvironment(deployedMismatch)).toThrow(
+      "Deployed DATABASE_URL does not match",
+    );
+  });
 });
 describe("fixture write protection", () => {
   it("accepts only the project's dedicated loopback databases", () => {

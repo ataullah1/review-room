@@ -681,34 +681,76 @@ try {
   console.error("Acceptance failure:", error.message);
   throw error;
 } finally {
+  await cleanupTrackedFixtures();
+}
+
+let cleaningUp = false;
+async function cleanupTrackedFixtures() {
+  if (cleaningUp) return;
+  cleaningUp = true;
   ws?.close();
   chrome?.kill();
-  for (const row of (
-    await db.query(
-      'SELECT "objectKey","stagingKey" FROM app."AssetVersion" WHERE "assetId"=$1',
-      [assetId],
-    )
-  ).rows) {
-    objects.add(row.objectKey);
-    objects.add(row.stagingKey);
+  try {
+    const rows = (
+      await db.query(
+        'SELECT "objectKey","stagingKey" FROM app."AssetVersion" WHERE "assetId"=$1',
+        [assetId],
+      )
+    ).rows;
+    for (const row of rows) {
+      objects.add(row.objectKey);
+      objects.add(row.stagingKey);
+    }
+  } catch {
+    // Database may already be disconnected or query may fail if aborted early
   }
   if (objects.size) {
-    const r = await storage(`object/${bucket}`, "DELETE", {
-      prefixes: [...objects],
-    });
-    if (!r.ok) throw new Error("Storage fixture cleanup failed");
+    try {
+      const r = await storage(`object/${bucket}`, "DELETE", {
+        prefixes: [...objects],
+      });
+      if (!r.ok)
+        console.error("Storage fixture cleanup notice: status", r.status);
+    } catch (err) {
+      console.error("Storage fixture cleanup failed:", err.message);
+    }
   }
-  await db.query(
-    'DELETE FROM app."Workspace" WHERE id=$1 OR "createdById"=ANY($2::uuid[])',
-    [workspaceId, users.map((u) => u.id)],
-  );
+  try {
+    await db.query(
+      'DELETE FROM app."Workspace" WHERE id=$1 OR "createdById"=ANY($2::uuid[])',
+      [workspaceId, users.map((u) => u.id)],
+    );
+  } catch (err) {
+    console.error("Workspace fixture cleanup notice:", err.message);
+  }
   for (const u of users) {
-    await db.query('DELETE FROM app."UserProfile" WHERE id=$1', [u.id]);
-    const r = await admin("users/" + u.id, "DELETE");
-    if (!r.ok) throw new Error("Auth cleanup failed");
+    try {
+      await db.query('DELETE FROM app."UserProfile" WHERE id=$1', [u.id]);
+      const r = await admin("users/" + u.id, "DELETE");
+      if (!r.ok)
+        console.error("Auth cleanup notice for", u.id, "status", r.status);
+    } catch (err) {
+      console.error("Auth user cleanup notice:", err.message);
+    }
   }
-  await db.end();
+  try {
+    await db.end();
+  } catch {
+    // Already closed
+  }
   console.log(
     "Temporary version objects, decisions, comments, workspaces and Auth users removed.",
   );
 }
+
+process.on("SIGINT", async () => {
+  console.log("\nInterrupted (SIGINT): cleaning up tracked fixtures...");
+  await cleanupTrackedFixtures();
+  process.exit(130);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("\nTerminated (SIGTERM): cleaning up tracked fixtures...");
+  await cleanupTrackedFixtures();
+  process.exit(143);
+});

@@ -21,6 +21,9 @@ export function AuthForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState(initialError);
   const [pending, setPending] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState("");
   const signup = mode === "signup";
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,10 +47,37 @@ export function AuthForm({
         setPending(false);
         return;
       }
+      if (data.pendingVerification) {
+        setPendingEmail(data.email || String(form.get("email")));
+        setPending(false);
+        return;
+      }
       window.location.assign(data.redirectTo);
     } catch {
       setError("Could not connect. Please try again.");
       setPending(false);
+    }
+  }
+  async function resendEmail() {
+    if (!pendingEmail || resending) return;
+    setResending(true);
+    setResendStatus("");
+    try {
+      const response = await fetch("/auth/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setResendStatus(data.error || "Could not resend verification email.");
+      } else {
+        setResendStatus("A new verification link has been sent.");
+      }
+    } catch {
+      setResendStatus("Could not connect. Please try again.");
+    } finally {
+      setResending(false);
     }
   }
   async function google() {
@@ -94,123 +124,174 @@ export function AuthForm({
         </span>
         <small>A little feedback goes a long way.</small>
       </section>
-      <main className="auth-card">
-        <span className="eyebrow">YOUR CREATIVE WORKSPACE</span>
-        <h1>{signup ? "Make room for better work." : "Welcome back."}</h1>
-        <p>
-          {signup
-            ? "Create your account and go straight to your workspace."
-            : "Log in to pick up where you left off."}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          className="auth-google-button"
-          disabled={pending}
-          onClick={google}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 48 48"
-            aria-hidden="true"
-            focusable="false"
+      {pendingEmail ? (
+        <main className="auth-card">
+          <span className="eyebrow">CHECK YOUR EMAIL</span>
+          <h1>Verify your email</h1>
+          <p>
+            We sent a verification link to <strong>{pendingEmail}</strong>.
+            Please check your inbox and click the link to confirm your account.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              marginTop: "20px",
+            }}
           >
-            <path
-              fill="#4285F4"
-              d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.17v5.13h6.61c3.87-3.56 6.08-8.8 6.08-14.8Z"
-            />
-            <path
-              fill="#34A853"
-              d="M24 44c5.51 0 10.13-1.83 13.53-4.94l-6.61-5.13c-1.83 1.23-4.18 1.97-6.92 1.97-5.32 0-9.83-3.59-11.44-8.42H5.73v5.29A20 20 0 0 0 24 44Z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M12.56 27.48a12 12 0 0 1 0-7.66v-5.29H5.73a20 20 0 0 0 0 18.24l6.83-5.29Z"
-            />
-            <path
-              fill="#EA4335"
-              d="M24 12.1c3 0 5.68 1.03 7.8 3.06l5.85-5.85C34.12 6.03 29.51 4 24 4A20 20 0 0 0 5.73 14.53l6.83 5.29C14.17 15.69 18.68 12.1 24 12.1Z"
-            />
-          </svg>
-          <span>Continue with Google</span>
-        </Button>
-        <div className="auth-divider">
-          <span>or continue with email</span>
-        </div>
-        <form ref={formRef} onSubmit={submit} aria-busy={pending}>
-          {signup && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={resending}
+              onClick={resendEmail}
+            >
+              {resending ? "Sending…" : "Resend verification link"}
+            </Button>
+            {resendStatus && (
+              <p
+                className="auth-error"
+                style={{ background: "#edf2e8", color: "#4e6741" }}
+                role="status"
+              >
+                {resendStatus}
+              </p>
+            )}
+            <p className="auth-switch">
+              Already verified?{" "}
+              <Link
+                href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </main>
+      ) : (
+        <main className="auth-card">
+          <span className="eyebrow">YOUR CREATIVE WORKSPACE</span>
+          <h1>{signup ? "Make room for better work." : "Welcome back."}</h1>
+          <p>
+            {signup
+              ? "Create your account and go straight to your workspace."
+              : "Log in to pick up where you left off."}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="auth-google-button"
+            disabled={pending}
+            onClick={google}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 48 48"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                fill="#4285F4"
+                d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.17v5.13h6.61c3.87-3.56 6.08-8.8 6.08-14.8Z"
+              />
+              <path
+                fill="#34A853"
+                d="M24 44c5.51 0 10.13-1.83 13.53-4.94l-6.61-5.13c-1.83 1.23-4.18 1.97-6.92 1.97-5.32 0-9.83-3.59-11.44-8.42H5.73v5.29A20 20 0 0 0 24 44Z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M12.56 27.48a12 12 0 0 1 0-7.66v-5.29H5.73a20 20 0 0 0 0 18.24l6.83-5.29Z"
+              />
+              <path
+                fill="#EA4335"
+                d="M24 12.1c3 0 5.68 1.03 7.8 3.06l5.85-5.85C34.12 6.03 29.51 4 24 4A20 20 0 0 0 5.73 14.53l6.83 5.29C14.17 15.69 18.68 12.1 24 12.1Z"
+              />
+            </svg>
+            <span>Continue with Google</span>
+          </Button>
+          <div className="auth-divider">
+            <span>or continue with email</span>
+          </div>
+          <form ref={formRef} onSubmit={submit} aria-busy={pending}>
+            {signup && (
+              <label>
+                Your name
+                <input
+                  name="displayName"
+                  autoComplete="name"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  placeholder="Alex Morgan"
+                  disabled={pending}
+                />
+              </label>
+            )}
             <label>
-              Your name
+              Email address
               <input
-                name="displayName"
-                autoComplete="name"
+                type="email"
+                name="email"
+                autoComplete="email"
                 required
-                minLength={2}
-                maxLength={80}
-                placeholder="Alex Morgan"
+                maxLength={254}
+                placeholder="you@studio.com"
                 disabled={pending}
               />
             </label>
-          )}
-          <label>
-            Email address
-            <input
-              type="email"
-              name="email"
-              autoComplete="email"
-              required
-              maxLength={254}
-              placeholder="you@studio.com"
+            <label>
+              Password
+              <input
+                type="password"
+                name="password"
+                autoComplete={signup ? "new-password" : "current-password"}
+                required
+                minLength={signup ? 10 : 1}
+                maxLength={128}
+                placeholder={
+                  signup ? "At least 10 characters" : "Your password"
+                }
+                disabled={pending}
+              />
+            </label>
+            {error && (
+              <div className="auth-error" role="alert">
+                {error}
+              </div>
+            )}
+            <Button
+              className="auth-submit-button"
               disabled={pending}
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              name="password"
-              autoComplete={signup ? "new-password" : "current-password"}
-              required
-              minLength={signup ? 10 : 1}
-              maxLength={128}
-              placeholder={signup ? "At least 10 characters" : "Your password"}
-              disabled={pending}
-            />
-          </label>
-          {error && (
-            <div className="auth-error" role="alert">
-              {error}
-            </div>
+              type="submit"
+            >
+              <span>
+                {pending
+                  ? "Please wait…"
+                  : signup
+                    ? "Create account"
+                    : "Log in"}
+              </span>
+              <ArrowRight size={16} />
+            </Button>
+          </form>
+          <p className="auth-switch">
+            {signup ? "Already have an account?" : "New to Review Room?"}{" "}
+            <Link
+              href={`${signup ? "/login" : "/signup"}${next === "/invite/accept" ? "?next=%2Finvite%2Faccept" : ""}`}
+            >
+              {signup ? "Log in" : "Create an account"}
+            </Link>
+          </p>
+          {!signup && demoAccounts.length === 3 && (
+            <a className="auth-demo-link" href="#demo-accounts-title">
+              Choose a reviewer demo role <ArrowRight size={13} />
+            </a>
           )}
-          <Button
-            className="auth-submit-button"
-            disabled={pending}
-            type="submit"
-          >
-            <span>
-              {pending ? "Please wait…" : signup ? "Create account" : "Log in"}
-            </span>
-            <ArrowRight size={16} />
-          </Button>
-        </form>
-        <p className="auth-switch">
-          {signup ? "Already have an account?" : "New to Review Room?"}{" "}
-          <Link
-            href={`${signup ? "/login" : "/signup"}${next === "/invite/accept" ? "?next=%2Finvite%2Faccept" : ""}`}
-          >
-            {signup ? "Log in" : "Create an account"}
+          <Link className="auth-demo-link" href="/demo">
+            Explore the sample workspace <ArrowRight size={13} />
           </Link>
-        </p>
-        {!signup && demoAccounts.length === 3 && (
-          <a className="auth-demo-link" href="#demo-accounts-title">
-            Choose a reviewer demo role <ArrowRight size={13} />
-          </a>
-        )}
-        <Link className="auth-demo-link" href="/demo">
-          Explore the sample workspace <ArrowRight size={13} />
-        </Link>
-      </main>
+        </main>
+      )}
       {!signup && demoAccounts.length === 3 && (
         <DemoAccounts
           accounts={demoAccounts}

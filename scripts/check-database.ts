@@ -1,16 +1,13 @@
 import { config } from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { readDatabaseEnvironment } from "../src/lib/config/environment";
+import { databaseConnectionOptions } from "../src/lib/config/database-connection";
 
 config({ path: ".env", quiet: true });
 async function main() {
-  const { DATABASE_URL } = readDatabaseEnvironment();
+  const options = databaseConnectionOptions(process.env);
   const db = new PrismaClient({
-    adapter: new PrismaPg(
-      { connectionString: DATABASE_URL },
-      { schema: "app" },
-    ),
+    adapter: new PrismaPg(options, { schema: "app" }),
   });
   try {
     await db.$queryRaw`SELECT 1`;

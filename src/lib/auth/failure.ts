@@ -8,6 +8,7 @@ export type AuthStage =
   | "provider_settings"
   | "password_provider"
   | "signup_provider"
+  | "resend_provider"
   | "identity_provider"
   | "logout_provider"
   | "quota_database"

@@ -3,12 +3,13 @@ import { authenticate, type AuthOperation } from "@/lib/auth/core";
 import { AuthFlowError } from "@/lib/auth/errors";
 import { createAuthClient, authConfiguration } from "@/lib/auth/supabase";
 import { identityFromUser } from "@/lib/auth/user";
-import { requireSameOrigin } from "@/lib/auth/validation";
+import { requireSameOrigin, safeReturnPath } from "@/lib/auth/validation";
 import { signupNetworkHash } from "@/lib/auth/ip";
 import { reserveSignup, discardSignupPermit } from "@/lib/auth/rate-limit";
 import { bootstrapWithQuota } from "@/lib/data/onboarding";
 import { getDb } from "@/lib/server/db";
 import { authFailure, type AuthStage } from "@/lib/auth/failure";
+import { readAppOrigin } from "@/lib/config/deployment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export async function POST(
       { status: 403, headers: privateHeaders },
     );
   const { operation } = await context.params;
-  if (!["signup", "login", "logout", "bootstrap"].includes(operation))
+  if (!["signup", "login", "logout", "bootstrap", "resend"].includes(operation))
     return NextResponse.json(
       { error: "Not found." },
       { status: 404, headers: privateHeaders },
@@ -59,11 +60,23 @@ export async function POST(
       provider: {
         async signUp({ email, password, displayName, permit }) {
           stage = "signup_provider";
+          const appOrigin = readAppOrigin();
+          const nextParam =
+            input &&
+            typeof input === "object" &&
+            "next" in input &&
+            typeof input.next === "string"
+              ? safeReturnPath(input.next)
+              : "";
+          const emailRedirectTo = nextParam
+            ? `${appOrigin}/auth/callback?next=${encodeURIComponent(nextParam)}`
+            : `${appOrigin}/auth/callback`;
           const { data, error } = await client.auth.signUp({
             email,
             password,
             options: {
               data: { display_name: displayName, signup_permit: permit },
+              emailRedirectTo,
             },
           });
           return {
@@ -78,10 +91,29 @@ export async function POST(
             email,
             password,
           });
+          const unconfirmed =
+            error?.message?.toLowerCase().includes("email not confirmed") ??
+            false;
           return {
             error: !!error,
             rateLimited: error?.status === 429,
             hasSession: !!data.session,
+            unconfirmed,
+          };
+        },
+        async resendVerification({ email }) {
+          stage = "resend_provider";
+          const appOrigin = readAppOrigin();
+          const { error } = await client.auth.resend({
+            type: "signup",
+            email,
+            options: {
+              emailRedirectTo: `${appOrigin}/auth/callback`,
+            },
+          });
+          return {
+            error: !!error,
+            rateLimited: error?.status === 429,
           };
         },
         async getUser() {
@@ -120,10 +152,7 @@ export async function POST(
           signal: AbortSignal.timeout(10_000),
         });
         const settings = response.ok ? await response.json() : {};
-        if (
-          settings.mailer_autoconfirm !== true ||
-          settings.external?.email !== true
-        )
+        if (settings.external?.email !== true)
           throw new AuthFlowError(
             "Signup is temporarily unavailable. Please try again later.",
             503,
