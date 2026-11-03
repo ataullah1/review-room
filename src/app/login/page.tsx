@@ -6,9 +6,9 @@ import { safeReturnPath } from "@/lib/auth/validation";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; reset?: string }>;
 }) {
-  const { next, error } = await searchParams;
+  const { next, error, reset } = await searchParams;
   let demoAccounts = publicDemoAccounts();
   if (demoAccounts.length) {
     try {
@@ -27,12 +27,19 @@ export default async function LoginPage({
       mode="login"
       demoAccounts={demoAccounts}
       next={safeReturnPath(next)}
+      initialSuccess={
+        reset === "success"
+          ? "Password updated successfully. Please sign in with your new password."
+          : undefined
+      }
       initialError={
         error === "callback"
           ? "Google sign-in did not finish. Please try again."
           : error === "verification"
             ? "The verification link is invalid or has expired. Please sign in or request a new link."
-            : undefined
+            : error === "recovery"
+              ? "The password reset link is invalid or has expired. Please request a new one."
+              : undefined
       }
     />
   );

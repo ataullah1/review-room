@@ -22,7 +22,9 @@ function PeoplePicker({
       </legend>
       <p>
         Only assigned designers and clients can access this project. Owners
-        always have access.
+        always have access. Removing a person from this project revokes their
+        access here while keeping their workspace account and other project
+        assignments.
       </p>
       {people.length ? (
         <div className="project-people-options">

@@ -9,6 +9,7 @@ import { actionFailure } from "@/lib/server/diagnostics";
 import {
   createProject,
   updateProjectMembers,
+  removeProjectMember,
   setProjectArchived,
 } from "@/lib/data/projects";
 import { getDb } from "@/lib/server/db";
@@ -20,7 +21,7 @@ export type ProjectActionState = {
 export async function mutateProject(
   workspaceId: string,
   projectId: string | null,
-  operation: "create" | "members" | "archive" | "restore",
+  operation: "create" | "members" | "remove-member" | "archive" | "restore",
   _previous: ProjectActionState,
   form: FormData,
 ): Promise<ProjectActionState> {
@@ -40,7 +41,16 @@ export async function mutateProject(
         await updateProjectMembers(tx, user.id, workspaceId, projectId, {
           memberIds: form.getAll("memberIds"),
         });
-      else if (operation === "archive" || operation === "restore")
+      else if (operation === "remove-member") {
+        const targetUserId = String(form.get("userId") || "");
+        await removeProjectMember(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          targetUserId,
+        );
+      } else if (operation === "archive" || operation === "restore")
         await setProjectArchived(
           tx,
           user.id,
@@ -57,11 +67,13 @@ export async function mutateProject(
       success:
         operation === "members"
           ? "Project people updated."
-          : operation === "archive"
-            ? "Project archived. Its history and people are preserved."
-            : operation === "restore"
-              ? "Project restored."
-              : "Project created.",
+          : operation === "remove-member"
+            ? "Member removed from this project. Workspace membership and other project assignments remain."
+            : operation === "archive"
+              ? "Project archived. Its history and people are preserved."
+              : operation === "restore"
+                ? "Project restored."
+                : "Project created.",
       projectId: result.id,
     };
   } catch (error) {

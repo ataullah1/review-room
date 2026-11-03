@@ -7,6 +7,7 @@ import { getDb } from "@/lib/server/db";
 import { withUserDatabase } from "@/lib/data/context";
 import {
   createInvitation,
+  replaceInvitation,
   listInvitations,
   revokeInvitation,
 } from "@/lib/data/sharing";
@@ -44,12 +45,15 @@ export async function POST(request: Request, context: Context) {
           role: z.string(),
         }),
         z.object({ operation: z.literal("revoke"), id: z.uuid() }),
+        z.object({ operation: z.literal("replace"), id: z.uuid() }),
       ])
       .parse(input);
     const result = await withUserDatabase<unknown>(getDb(), user.id, (tx) =>
       data.operation === "create"
         ? createInvitation(tx, user.id, workspaceId, projectId, data)
-        : revokeInvitation(tx, user.id, workspaceId, projectId, data.id),
+        : data.operation === "replace"
+          ? replaceInvitation(tx, user.id, workspaceId, projectId, data.id)
+          : revokeInvitation(tx, user.id, workspaceId, projectId, data.id),
     );
     return NextResponse.json(result, { headers: capabilityHeaders });
   } catch (e) {

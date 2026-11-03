@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { AccessError } from "../auth/errors";
 import {
   requireWorkspaceMember,
@@ -145,6 +146,39 @@ export async function updateProjectMembers(
     await tx.projectMember.createMany({
       data: memberIds.map((userId) => ({ projectId, workspaceId, userId })),
     });
+}
+export async function removeProjectMember(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  targetUserId: string,
+) {
+  const { project } = await requireProjectRole(
+    tx,
+    userId,
+    workspaceId,
+    projectId,
+    ["OWNER"],
+  );
+  await lockProject(tx, project.id);
+  const current = await tx.project.findUniqueOrThrow({
+    where: { id: project.id },
+  });
+  if (current.archivedAt)
+    throw new AccessError(
+      "Restore this project before changing its people.",
+      409,
+    );
+  z.uuid().parse(targetUserId);
+  const member = await tx.projectMember.findFirst({
+    where: { projectId, workspaceId, userId: targetUserId },
+  });
+  if (!member) throw new AccessError("Member not found in this project.", 404);
+  await tx.projectMember.deleteMany({
+    where: { projectId, workspaceId, userId: targetUserId },
+  });
+  return { removed: true, userId: targetUserId };
 }
 export async function setProjectArchived(
   tx: UserDatabase,

@@ -76,8 +76,21 @@ export async function createInvitation(
       "Revoke an active invitation before creating another (maximum 50).",
       429,
     );
-  const data = inviteInput.parse(input),
-    token = makeToken(),
+  const data = inviteInput.parse(input);
+  const conflictingRole = await tx.projectInvitation.findFirst({
+    where: {
+      workspaceId,
+      email: data.email,
+      acceptedAt: { not: null },
+      role: { not: data.role },
+    },
+  });
+  if (conflictingRole)
+    throw new AccessError(
+      `This user already has the ${conflictingRole.role.toLowerCase()} role in this workspace. Each person can only have one workspace role.`,
+      409,
+    );
+  const token = makeToken(),
     row = await tx.projectInvitation.create({
       data: {
         ...data,
@@ -87,6 +100,70 @@ export async function createInvitation(
         expiresAt: await expiry(tx, 7),
       },
     });
+  return { id: row.id, token, expiresAt: row.expiresAt.toISOString() };
+}
+export async function replaceInvitation(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  id: string,
+) {
+  await owner(tx, userId, workspaceId, projectId);
+  z.uuid().parse(id);
+  const existing = await tx.projectInvitation.findFirst({
+    where: { id, workspaceId, projectId },
+  });
+  if (!existing) throw new AccessError("Invitation not found.", 404);
+  if (existing.acceptedAt)
+    throw new AccessError(
+      "This invitation has already been accepted. Manage access in Project people.",
+      400,
+    );
+  if (!existing.revokedAt)
+    await tx.projectInvitation.update({
+      where: { id: existing.id },
+      data: { revokedAt: new Date() },
+    });
+  if (
+    (await tx.projectInvitation.count({
+      where: {
+        projectId,
+        workspaceId,
+        revokedAt: null,
+        acceptedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    })) >= 50
+  )
+    throw new AccessError(
+      "Revoke an active invitation before creating another (maximum 50).",
+      429,
+    );
+  const conflictingRole = await tx.projectInvitation.findFirst({
+    where: {
+      workspaceId,
+      email: existing.email,
+      acceptedAt: { not: null },
+      role: { not: existing.role },
+    },
+  });
+  if (conflictingRole)
+    throw new AccessError(
+      `This user already has the ${conflictingRole.role.toLowerCase()} role in this workspace. Each person can only have one workspace role.`,
+      409,
+    );
+  const token = makeToken();
+  const row = await tx.projectInvitation.create({
+    data: {
+      email: existing.email,
+      role: existing.role,
+      workspaceId,
+      projectId,
+      tokenHash: hashToken(token),
+      expiresAt: await expiry(tx, 7),
+    },
+  });
   return { id: row.id, token, expiresAt: row.expiresAt.toISOString() };
 }
 export async function listInvitations(
@@ -133,7 +210,12 @@ export async function revokeInvitation(
       where: { id },
       data: { revokedAt: new Date() },
     });
-  return { revoked: true };
+  return {
+    revoked: true,
+    warning: row.acceptedAt
+      ? "Revoking an accepted invitation link does not remove project access. To remove this person, use Project people."
+      : undefined,
+  };
 }
 export type InvitationPreview = {
   id: string;

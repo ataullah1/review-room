@@ -24,6 +24,7 @@ export function OwnerLinks({
     [link, setLink] = useState(""),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
     [copied, setCopied] = useState(false),
     [now, setNow] = useState(0);
   const load = useCallback(async () => {
@@ -48,6 +49,7 @@ export function OwnerLinks({
     const form = new FormData(event.currentTarget);
     setPending(true);
     setError("");
+    setNotice("");
     setCopied(false);
     setLink("");
     try {
@@ -73,10 +75,38 @@ export function OwnerLinks({
       setPending(false);
     }
   }
+  async function replace(id: string) {
+    if (pending) return;
+    setPending(true);
+    setError("");
+    setNotice("");
+    setCopied(false);
+    setLink("");
+    try {
+      const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ operation: "replace", id }),
+        }),
+        data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setLink(`${window.location.origin}/${kind}#${data.token}`);
+      await load();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not replace this invitation.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
   async function revoke(id: string) {
     if (pending) return;
     setPending(true);
     setError("");
+    setNotice("");
     try {
       const response = await fetch(endpoint, {
           method: "POST",
@@ -85,6 +115,7 @@ export function OwnerLinks({
         }),
         data = await response.json();
       if (!response.ok) throw new Error(data.error);
+      if (data.warning) setNotice(data.warning);
       setLink("");
       await load();
     } catch (error) {
@@ -175,6 +206,15 @@ export function OwnerLinks({
           </p>
         </div>
       )}
+      {notice && (
+        <p
+          className="project-notice"
+          role="status"
+          style={{ margin: "12px 0" }}
+        >
+          {notice}
+        </p>
+      )}
       {error && (
         <p className="auth-error" role="alert">
           {error}
@@ -190,21 +230,33 @@ export function OwnerLinks({
                 {row.revokedAt
                   ? "Revoked"
                   : row.acceptedAt
-                    ? "Accepted"
+                    ? "Accepted · Access managed in Project people"
                     : new Date(row.expiresAt).getTime() < now
                       ? "Expired"
                       : `Expires ${new Date(row.expiresAt).toLocaleDateString("en", { timeZone: "UTC" })}`}
               </span>
             </div>
-            {!row.revokedAt && (
-              <button
-                disabled={pending}
-                type="button"
-                onClick={() => revoke(row.id)}
-              >
-                Revoke
-              </button>
-            )}
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {kind === "invite" && !row.acceptedAt && !disabled && (
+                <button
+                  disabled={pending}
+                  type="button"
+                  onClick={() => replace(row.id)}
+                  title="Revoke the old link and generate a fresh invitation"
+                >
+                  Replace & Resend
+                </button>
+              )}
+              {!row.revokedAt && !disabled && (
+                <button
+                  disabled={pending}
+                  type="button"
+                  onClick={() => revoke(row.id)}
+                >
+                  {row.acceptedAt ? "Revoke link" : "Revoke"}
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>
