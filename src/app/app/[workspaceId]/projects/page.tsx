@@ -40,7 +40,8 @@ export default async function ProjectsPage({
     }
     throw error;
   }
-  const { workspace, projects, member, total, page, pages } = result;
+  const { workspace, projects, member, total, page, pages, storageUsage } =
+    result;
   const base = `/app/${workspaceId}/projects`;
   const listUrl = (status: string, page = 1) =>
     `${base}?${new URLSearchParams({ status, ...(filters.q ? { q: filters.q } : {}), ...(page > 1 ? { page: String(page) } : {}) })}`;
@@ -70,6 +71,33 @@ export default async function ProjectsPage({
           </Button>
         )}
       </div>
+      {member.role === "OWNER" && storageUsage && (
+        <div
+          className="project-notice"
+          style={{
+            margin: "0 0 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
+          <span>
+            <strong>Workspace storage:</strong>{" "}
+            {(storageUsage.totalAccountedBytes / (1024 * 1024)).toFixed(1)} MB
+            of {(storageUsage.maxStorageBytes / (1024 * 1024)).toFixed(0)} MB
+            used ({storageUsage.usagePercentage}%) ·{" "}
+            {storageUsage.readyVersionsCount}{" "}
+            {storageUsage.readyVersionsCount === 1 ? "version" : "versions"}
+          </span>
+          {storageUsage.isOverLimit && (
+            <span style={{ color: "#8c3b2b", fontWeight: 600 }}>
+              Storage limit reached
+            </span>
+          )}
+        </div>
+      )}
       <div className="projects-toolbar">
         <nav className="project-tabs" aria-label="Project status">
           <Link

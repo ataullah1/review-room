@@ -4,6 +4,8 @@ import type { UserDatabase } from "./context";
 import { requireProjectAccess, requireProjectRole } from "./permissions";
 import { uploadInput, UploadError } from "../../features/uploads/validation";
 import type { validateImage } from "../../features/uploads/image";
+import { assertStorageAvailable } from "./storage-accounting";
+import type { StorageLimits } from "../config/limits";
 async function writable(
   tx: UserDatabase,
   userId: string,
@@ -27,6 +29,7 @@ export async function prepareUpload(
   workspaceId: string,
   projectId: string,
   input: unknown,
+  limits?: StorageLimits,
 ) {
   await writable(tx, userId, workspaceId, projectId);
   const file = uploadInput.parse(input);
@@ -44,6 +47,7 @@ export async function prepareUpload(
       "Finish or cancel your existing uploads before starting another.",
       429,
     );
+  await assertStorageAvailable(tx, userId, workspaceId, file.size, limits);
   const assetId = file.assetId || randomUUID();
   if (file.assetId) {
     const asset = await tx.asset.findFirst({

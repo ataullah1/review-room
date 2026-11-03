@@ -8,6 +8,7 @@ import {
 import { projectDirectory, assignableMembers } from "@/lib/data/projects";
 import { projectFilters } from "@/features/projects/validation";
 import { listAssets } from "@/lib/data/uploads";
+import { getWorkspaceStorageUsage } from "@/lib/data/storage-accounting";
 import { isExistingDemoEmail } from "@/features/reviewer-demo/config";
 import { getDb } from "./db";
 
@@ -43,10 +44,15 @@ export async function getWorkspaceProjects(
     const workspace = await tx.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
     });
+    const storageUsage =
+      member.role === "OWNER"
+        ? await getWorkspaceStorageUsage(tx, user.id, workspaceId)
+        : null;
     return {
       user,
       member,
       workspace,
+      storageUsage,
       ...(await projectDirectory(
         tx,
         user.id,

@@ -59,7 +59,7 @@ All tasks start **not started**. “Decision/setup prerequisite” notes identif
 | RR-004  | 1 — Identity            | Password recovery                                     | new feature / P0                  | implemented-unverified | RR-003                         | Self-service recovery request and password reset routes; callback session exchange; demo credential protections; 18 files / 156 unit tests passing.                |
 | RR-005  | 1 — Identity            | Invitation lifecycle and project-access removal       | improvement / P1                  | implemented-unverified | RR-003                         | Explicit invite replacement revoking prior token; access removal retaining workspace/other projects; conflicting role guidance; 18 files / 166 unit tests passing. |
 | RR-006  | 2 — Storage             | Backlog-aware cleanup                                 | improvement / P0                  | implemented-unverified | RR-002                         | Bounded PENDING expiration, worker leases, retry backoff, queue depth/oldest age metrics; 18 files / 171 unit tests passing.                                       |
-| RR-007  | 2 — Storage             | Usage accounting and configurable limits              | new feature / P0                  | not started            | RR-006                         | Existing per-file/pending/demo limits are not normal workspace byte accounting. Backfill before enforcement.                                                       |
+| RR-007  | 2 — Storage             | Usage accounting and configurable limits              | new feature / P0                  | implemented-unverified | RR-006                         | Committed READY + reserved PENDING accounting, workspace advisory serialization, owner meter, CLI reconciliation; 19 files / 181 tests passing.                    |
 | RR-008  | 2 — Storage             | Interrupted upload recovery                           | improvement / P1                  | not started            | RR-006, RR-007                 | Existing state machine retained; recover expired processing/ambiguous outcomes without READY overwrite.                                                            |
 | RR-009  | 3 — Usability           | Invitation-aware onboarding/next actions              | improvement / P1                  | not started            | RR-003, RR-005, RR-008         | Existing normal bootstrap may create empty personal workspace for invitees. Do not delete legacy workspaces.                                                       |
 | RR-010  | 3 — Usability           | Project metadata and overview                         | improvement / P1                  | not started            | RR-009                         | Nullable description/date-only due date, owner rename; aggregate filters wait for RR-015.                                                                          |
@@ -370,4 +370,47 @@ External writes authorized/performed (or none): None.
 Rollout/rollback constraints: Backwards-compatible function signature; existing `AssetVersion` columns (`processingToken`, `processingUntil`, `cleanedAt`, `cleanupAfter`) are used without schema changes.
 Remaining acceptance gaps and concrete block, if any: Verification with a live deployed Vercel cron and private Supabase storage bucket; status remains implemented-unverified per roadmap rules.
 Phase gate impact: Phase 2 cleanup reliability implemented locally; Phase 2 gate remains open pending usage accounting (RR-007) and retry recovery (RR-008).
+```
+
+## Execution receipt — 3 November 2026 (RR-007)
+
+```text
+Date / actor: 3 November 2026 / Antigravity Agent
+Task ID and checkpoint: RR-007 (Phase 2 — Upload and storage reliability: Usage accounting and configurable non-billing limits)
+Repository commit + relevant uncommitted scope: HEAD b3a7585; modified: .env.example, docs/IMPLEMENTATION-STATUS.md, src/app/app/[workspaceId]/projects/page.tsx, src/lib/data/uploads.ts, src/lib/server/workspaces.ts; untracked: scripts/reconcile-storage.ts, src/lib/config/limits.ts, src/lib/data/storage-accounting.ts, tests/storage-accounting.test.ts
+Status before → after: not started → implemented-unverified
+Inspected current behavior and files: Normal workspace aggregate storage had no model, counter, or limit enforcement; only public demo had `ReviewerDemoQuota`; `prepareUpload` only checked single-file size (10 MB) and active reservations per user (5), allowing unbounded workspace total storage consumption; owners had no visibility into workspace storage usage; operators lacked non-destructive storage reconciliation.
+Implemented files and migrations (if any):
+  - src/lib/config/limits.ts: defined documented finite installation defaults (500 MB maxStorageBytes, 200 maxReadyVersions, 5 maxPendingUploads) and environment variable overrides (`WORKSPACE_MAX_STORAGE_BYTES`, `WORKSPACE_MAX_READY_VERSIONS`, `WORKSPACE_MAX_PENDING_UPLOADS`).
+  - src/lib/data/storage-accounting.ts:
+    - Added `getWorkspaceStorageUsage(tx, userId, workspaceId, limits, now)`: enforces workspace membership, aggregates committed bytes from all historical and current READY versions, aggregates active unexpired PENDING reserved bytes, computes usage percentage and over-limit status.
+    - Added `assertStorageAvailable(tx, userId, workspaceId, expectedNewBytes, limits, now)`: acquires atomic transaction advisory lock (`storage:${workspaceId}`) to serialize concurrent reservations, rejects with 429 status and clear remediation instructions when byte limit, version limit, or pending reservation limit would be exceeded.
+    - Added `reconcileWorkspaceStorage(db, targetWorkspaceId, limits, now)`: non-destructive operator reconciliation calculating actual committed, active reserved, stale expired, and failed versions per workspace without deleting files.
+  - src/lib/data/uploads.ts: integrated `assertStorageAvailable` into `prepareUpload` under the workspace storage advisory lock.
+  - src/lib/server/workspaces.ts: updated `getWorkspaceProjects` to return `storageUsage` for workspace owners.
+  - src/app/app/[workspaceId]/projects/page.tsx: added owner workspace storage meter showing used MB, limit MB, usage percentage, version count, and limit warning.
+  - scripts/reconcile-storage.ts: added operator CLI tool supporting whole-cluster or per-workspace reconciliation reporting.
+  - .env.example: documented optional storage limit configuration variables.
+  - tests/storage-accounting.test.ts: added 10 unit tests covering default limits, custom environment overrides, safe fallbacks, accurate byte/version aggregation, atomic workspace serialization, byte limit rejection, version limit rejection, pending upload limit rejection, unauthorized non-member rejection, and non-destructive reconciliation reporting.
+Configuration/manual prerequisites; actual changes versus instructions only: Local implementation and automated tests only. No external services or credentials mutated.
+Environment class + non-secret target alias: Local test runner / isolated test environment.
+Commands run and exact pass/fail counts:
+  - `pnpm exec vitest run tests/storage-accounting.test.ts`: passed, 10 tests passed (0 failures).
+  - `pnpm exec vitest run --exclude 'tests/integration/**' --no-cache`: passed, 19 test files passed, 181 tests passed (0 failures).
+  - `pnpm exec tsc --noEmit`: passed with 0 errors.
+  - `pnpm exec eslint . --max-warnings=0`: passed with 0 errors, 0 warnings.
+  - `pnpm format:check`: all files formatted per Prettier code style.
+  - `pnpm check`: (lint + typecheck + test + format:check) passed with exit code 0.
+  - `pnpm db:validate`: Prisma schema valid.
+Manual/browser cases, viewport/device, outcomes: Local automated tests for storage limits, advisory lock serialization, over-limit rejection, and reconciliation; multi-role browser journeys deferred to authorized staging run.
+Negative authorization + compatibility/race evidence:
+  - Unauthorized non-members cannot read workspace storage usage.
+  - Concurrent reservations for the same workspace are serialized by `storage:${workspaceId}` advisory lock and cannot exceed the limit.
+  - Existing over-limit workspaces retain full read, view, approval, and comment history; only new `prepareUpload` reservations are blocked.
+  - Expired PENDING reservations are automatically excluded from active reserved bytes.
+  - Reconcile script detects totals without mutating or deleting files.
+External writes authorized/performed (or none): None.
+Rollout/rollback constraints: Index-backed aggregation on existing `AssetVersion` columns; no database schema change required. Disabling or increasing limits via environment variables immediately unblocks reservations.
+Remaining acceptance gaps and concrete block, if any: Verification across multiple concurrent uploads in a live deployed Supabase staging environment; status remains implemented-unverified per roadmap rules.
+Phase gate impact: Storage usage accounting and configurable non-billing limits complete locally; Phase 2 gate remains open pending interrupted upload recovery (RR-008).
 ```
