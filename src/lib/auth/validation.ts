@@ -7,6 +7,12 @@ export const signupSchema = loginSchema.extend({
   displayName: z.string().trim().min(2).max(80),
   password: z.string().min(10).max(128),
 });
+export const recoveryRequestSchema = z.object({
+  email: z.email().trim().toLowerCase().max(254),
+});
+export const passwordResetSchema = z.object({
+  password: z.string().min(10).max(128),
+});
 export function safeReturnPath(value: string | null | undefined) {
   if (value === "/invite/accept") return value;
   return value && /^\/app(?:\/[a-zA-Z0-9_-]+)*\/?$/.test(value)

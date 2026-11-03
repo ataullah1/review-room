@@ -1,9 +1,22 @@
 import { AuthFlowError } from "./errors";
-import { loginSchema, signupSchema, safeReturnPath } from "./validation";
+import {
+  loginSchema,
+  signupSchema,
+  recoveryRequestSchema,
+  passwordResetSchema,
+  safeReturnPath,
+} from "./validation";
 import type { VerifiedIdentity } from "../data/bootstrap";
+import { isExistingDemoEmail } from "../../features/reviewer-demo/config";
 
 export type AuthOperation =
-  "signup" | "login" | "logout" | "bootstrap" | "resend";
+  | "signup"
+  | "login"
+  | "logout"
+  | "bootstrap"
+  | "resend"
+  | "recover"
+  | "reset-password";
 export type ProviderResult = {
   error: boolean;
   rateLimited?: boolean;
@@ -26,6 +39,12 @@ export interface AuthDependencies {
     signIn(input: { email: string; password: string }): Promise<ProviderResult>;
     resendVerification?(input: {
       email: string;
+    }): Promise<{ error: boolean; rateLimited?: boolean }>;
+    resetPasswordForEmail?(input: {
+      email: string;
+    }): Promise<{ error: boolean; rateLimited?: boolean }>;
+    updatePassword?(input: {
+      password: string;
     }): Promise<{ error: boolean; rateLimited?: boolean }>;
     getUser(): Promise<VerifiedIdentity | null>;
     signOut(): Promise<boolean>;
@@ -67,6 +86,65 @@ export async function authenticate(
     return {
       ok: true,
       message: "If an account exists, a verification link has been sent.",
+    };
+  }
+  if (operation === "recover") {
+    const parsed = recoveryRequestSchema.safeParse(input);
+    if (!parsed.success)
+      throw new AuthFlowError("Enter a valid email address.", 400);
+    const email = parsed.data.email;
+    if (!isExistingDemoEmail(email) && deps.provider.resetPasswordForEmail) {
+      const res = await deps.provider.resetPasswordForEmail({ email });
+      if (res.rateLimited)
+        throw new AuthFlowError(
+          "Too many attempts. Please try again later.",
+          429,
+          60,
+        );
+    }
+    return {
+      ok: true,
+      message: "If an account exists, instructions have been sent.",
+    };
+  }
+  if (operation === "reset-password") {
+    const parsed = passwordResetSchema.safeParse(input);
+    if (!parsed.success)
+      throw new AuthFlowError("Enter a password of 10–128 characters.", 400);
+    const user = await deps.provider.getUser();
+    if (!user) {
+      throw new AuthFlowError(
+        "Your recovery session has expired. Request a new reset link.",
+        401,
+      );
+    }
+    if (isExistingDemoEmail(user.email)) {
+      throw new AuthFlowError(
+        "Password reset is not permitted for demo accounts.",
+        403,
+      );
+    }
+    if (deps.provider.updatePassword) {
+      const res = await deps.provider.updatePassword({
+        password: parsed.data.password,
+      });
+      if (res.rateLimited) {
+        throw new AuthFlowError(
+          "Too many attempts. Please try again later.",
+          429,
+          60,
+        );
+      }
+      if (res.error) {
+        throw new AuthFlowError(
+          "Could not update password. Please try again.",
+          400,
+        );
+      }
+    }
+    await deps.provider.signOut();
+    return {
+      redirectTo: "/login?reset=success",
     };
   }
   if (operation === "signup" || operation === "login") {

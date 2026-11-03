@@ -18,6 +18,8 @@ function dependencies() {
       signUp: vi.fn().mockResolvedValue({ error: false, hasSession: true }),
       signIn: vi.fn().mockResolvedValue({ error: false, hasSession: true }),
       resendVerification: vi.fn().mockResolvedValue({ error: false }),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: false }),
+      updatePassword: vi.fn().mockResolvedValue({ error: false }),
       getUser: vi.fn().mockResolvedValue(user),
       signOut: vi.fn().mockResolvedValue(true),
     },
@@ -124,6 +126,90 @@ describe("authentication flow", () => {
     ).rejects.toMatchObject({
       status: 429,
     });
+  });
+  it("requests password recovery without account enumeration", async () => {
+    const deps = dependencies();
+    const result = await authenticate("recover", { email: input.email }, deps);
+    expect(result).toEqual({
+      ok: true,
+      message: "If an account exists, instructions have been sent.",
+    });
+    expect(deps.provider.resetPasswordForEmail).toHaveBeenCalledWith({
+      email: input.email,
+    });
+  });
+  it("protects demo accounts from password recovery requests without disclosing existence", async () => {
+    const deps = dependencies();
+    const result = await authenticate(
+      "recover",
+      { email: "demo@admin.com" },
+      deps,
+    );
+    expect(result).toEqual({
+      ok: true,
+      message: "If an account exists, instructions have been sent.",
+    });
+    expect(deps.provider.resetPasswordForEmail).not.toHaveBeenCalled();
+  });
+  it("validates recovery email format", async () => {
+    const deps = dependencies();
+    await expect(
+      authenticate("recover", { email: "not-an-email" }, deps),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it("rate limits recovery requests", async () => {
+    const deps = dependencies();
+    deps.provider.resetPasswordForEmail = vi
+      .fn()
+      .mockResolvedValue({ error: true, rateLimited: true });
+    await expect(
+      authenticate("recover", { email: input.email }, deps),
+    ).rejects.toMatchObject({ status: 429 });
+  });
+  it("resets password with active recovery session and logs out", async () => {
+    const deps = dependencies();
+    const result = await authenticate(
+      "reset-password",
+      { password: "new-valid-password-123" },
+      deps,
+    );
+    expect(result).toEqual({ redirectTo: "/login?reset=success" });
+    expect(deps.provider.updatePassword).toHaveBeenCalledWith({
+      password: "new-valid-password-123",
+    });
+    expect(deps.provider.signOut).toHaveBeenCalled();
+  });
+  it("validates password length on reset", async () => {
+    const deps = dependencies();
+    await expect(
+      authenticate("reset-password", { password: "short" }, deps),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it("rejects password reset without active session", async () => {
+    const deps = dependencies();
+    deps.provider.getUser = vi.fn().mockResolvedValue(null);
+    await expect(
+      authenticate(
+        "reset-password",
+        { password: "new-valid-password-123" },
+        deps,
+      ),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+  it("blocks password reset on public demo accounts", async () => {
+    const deps = dependencies();
+    deps.provider.getUser = vi.fn().mockResolvedValue({
+      id: "demo-user-id",
+      email: "demo@designer.com",
+    });
+    await expect(
+      authenticate(
+        "reset-password",
+        { password: "new-valid-password-123" },
+        deps,
+      ),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(deps.provider.updatePassword).not.toHaveBeenCalled();
   });
   it("logs in using a fresh verified user and handles invalid credentials", async () => {
     const deps = dependencies();

@@ -11,15 +11,18 @@ export function AuthForm({
   mode,
   next,
   initialError = "",
+  initialSuccess = "",
   demoAccounts = [],
 }: {
   mode: "signup" | "login";
   next?: string;
   initialError?: string;
+  initialSuccess?: string;
   demoAccounts?: PublicDemoAccount[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState(initialError);
+  const [success, setSuccess] = useState(initialSuccess);
   const [pending, setPending] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
@@ -30,6 +33,7 @@ export function AuthForm({
     const form = new FormData(event.currentTarget);
     setPending(true);
     setError("");
+    setSuccess("");
     try {
       const response = await fetch(`/auth/${mode}`, {
         method: "POST",
@@ -240,7 +244,28 @@ export function AuthForm({
               />
             </label>
             <label>
-              Password
+              <span
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>Password</span>
+                {!signup && (
+                  <Link
+                    href="/forgot-password"
+                    style={{
+                      fontWeight: 400,
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </span>
               <input
                 type="password"
                 name="password"
@@ -254,6 +279,15 @@ export function AuthForm({
                 disabled={pending}
               />
             </label>
+            {success && !error && (
+              <div
+                className="auth-error"
+                style={{ background: "#edf2e8", color: "#4e6741" }}
+                role="status"
+              >
+                {success}
+              </div>
+            )}
             {error && (
               <div className="auth-error" role="alert">
                 {error}

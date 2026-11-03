@@ -76,33 +76,41 @@ export async function GET(request: NextRequest) {
       await discardSignupPermit(getDb(), token).catch(() => undefined);
     }
   } else {
-    // Email verification flow (PKCE code or OTP token_hash)
+    // Email verification or password recovery flow (PKCE code or OTP token_hash)
     const code = request.nextUrl.searchParams.get("code");
     const tokenHash = request.nextUrl.searchParams.get("token_hash");
     const type = request.nextUrl.searchParams.get("type");
+    const isRecovery = type === "recovery";
+    const failurePath = isRecovery
+      ? "/login?error=recovery"
+      : "/login?error=verification";
     const hasError = request.nextUrl.searchParams.has("error");
 
     if (hasError) {
-      path = "/login?error=verification";
+      path = failurePath;
     } else if (code) {
       try {
         const client = await createAuthClient(true);
         const { error: exchangeError } =
           await client.auth.exchangeCodeForSession(code);
         if (exchangeError) {
-          path = "/login?error=verification";
+          path = failurePath;
         } else {
           const { data, error: userError } = await client.auth.getUser();
           if (!userError && data.user) {
-            const user = identityFromUser(data.user);
-            await bootstrapWithQuota(getDb(), user, request.headers, false);
-            path = "/app";
+            if (isRecovery) {
+              path = "/reset-password";
+            } else {
+              const user = identityFromUser(data.user);
+              await bootstrapWithQuota(getDb(), user, request.headers, false);
+              path = "/app";
+            }
           } else {
-            path = "/login?error=verification";
+            path = failurePath;
           }
         }
       } catch {
-        path = "/login?error=verification";
+        path = failurePath;
       }
     } else if (tokenHash && type) {
       try {
@@ -112,22 +120,26 @@ export async function GET(request: NextRequest) {
           type: type as EmailOtpType,
         });
         if (otpError) {
-          path = "/login?error=verification";
+          path = failurePath;
         } else {
           const { data, error: userError } = await client.auth.getUser();
           if (!userError && data.user) {
-            const user = identityFromUser(data.user);
-            await bootstrapWithQuota(getDb(), user, request.headers, false);
-            path = "/app";
+            if (isRecovery) {
+              path = "/reset-password";
+            } else {
+              const user = identityFromUser(data.user);
+              await bootstrapWithQuota(getDb(), user, request.headers, false);
+              path = "/app";
+            }
           } else {
-            path = "/login?error=verification";
+            path = failurePath;
           }
         }
       } catch {
-        path = "/login?error=verification";
+        path = failurePath;
       }
     } else {
-      path = "/login?error=verification";
+      path = failurePath;
     }
   }
 

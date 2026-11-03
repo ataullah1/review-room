@@ -46,7 +46,17 @@ export async function POST(
       { status: 403, headers: privateHeaders },
     );
   const { operation } = await context.params;
-  if (!["signup", "login", "logout", "bootstrap", "resend"].includes(operation))
+  if (
+    ![
+      "signup",
+      "login",
+      "logout",
+      "bootstrap",
+      "resend",
+      "recover",
+      "reset-password",
+    ].includes(operation)
+  )
     return NextResponse.json(
       { error: "Not found." },
       { status: 404, headers: privateHeaders },
@@ -111,6 +121,25 @@ export async function POST(
               emailRedirectTo: `${appOrigin}/auth/callback`,
             },
           });
+          return {
+            error: !!error,
+            rateLimited: error?.status === 429,
+          };
+        },
+        async resetPasswordForEmail({ email }) {
+          stage = "password_provider";
+          const appOrigin = readAppOrigin();
+          const { error } = await client.auth.resetPasswordForEmail(email, {
+            redirectTo: `${appOrigin}/auth/callback?type=recovery`,
+          });
+          return {
+            error: !!error,
+            rateLimited: error?.status === 429,
+          };
+        },
+        async updatePassword({ password }) {
+          stage = "password_provider";
+          const { error } = await client.auth.updateUser({ password });
           return {
             error: !!error,
             rateLimited: error?.status === 429,
