@@ -11,7 +11,10 @@ export async function GET(request: Request) {
     async cleanup() {
       const db = getDb();
       const demo = await cleanupDemoSessions(db, 100);
-      const uploads = await cleanupUploads(db, getUploadStorage(), 5);
+      const uploads = await cleanupUploads(db, getUploadStorage(), {
+        limit: 25,
+        maxDrainBudgetMs: 40_000,
+      });
       return { demo, uploads };
     },
     log: (event) => console.info(JSON.stringify(event)),

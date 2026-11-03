@@ -58,7 +58,7 @@ All tasks start **not started**. “Decision/setup prerequisite” notes identif
 | RR-003  | 1 — Identity            | Verification-aware signup and invitation identity     | security contract correction / P0 | implemented-unverified | RR-001, RR-002                 | Verification-aware signup and resend flow; callback PKCE/OTP session exchange; return-path preservation; 18 files / 148 unit tests passing.                        |
 | RR-004  | 1 — Identity            | Password recovery                                     | new feature / P0                  | implemented-unverified | RR-003                         | Self-service recovery request and password reset routes; callback session exchange; demo credential protections; 18 files / 156 unit tests passing.                |
 | RR-005  | 1 — Identity            | Invitation lifecycle and project-access removal       | improvement / P1                  | implemented-unverified | RR-003                         | Explicit invite replacement revoking prior token; access removal retaining workspace/other projects; conflicting role guidance; 18 files / 166 unit tests passing. |
-| RR-006  | 2 — Storage             | Backlog-aware cleanup                                 | improvement / P0                  | not started            | RR-002                         | Daily five-row upload batch plus opportunistic cleanup; add bounded expiry claims/retry/queue visibility.                                                          |
+| RR-006  | 2 — Storage             | Backlog-aware cleanup                                 | improvement / P0                  | implemented-unverified | RR-002                         | Bounded PENDING expiration, worker leases, retry backoff, queue depth/oldest age metrics; 18 files / 171 unit tests passing.                                       |
 | RR-007  | 2 — Storage             | Usage accounting and configurable limits              | new feature / P0                  | not started            | RR-006                         | Existing per-file/pending/demo limits are not normal workspace byte accounting. Backfill before enforcement.                                                       |
 | RR-008  | 2 — Storage             | Interrupted upload recovery                           | improvement / P1                  | not started            | RR-006, RR-007                 | Existing state machine retained; recover expired processing/ambiguous outcomes without READY overwrite.                                                            |
 | RR-009  | 3 — Usability           | Invitation-aware onboarding/next actions              | improvement / P1                  | not started            | RR-003, RR-005, RR-008         | Existing normal bootstrap may create empty personal workspace for invitees. Do not delete legacy workspaces.                                                       |
@@ -327,4 +327,47 @@ External writes authorized/performed (or none): None.
 Rollout/rollback constraints: Additive functions and UI workflows; existing invitation rows and memberships remain compatible; no schema migration required.
 Remaining acceptance gaps and concrete block, if any: Verification across multiple browser roles in a live deployed Supabase staging environment; status remains implemented-unverified per roadmap rules.
 Phase gate impact: Phase 1 (Identity, recovery and access lifecycle) local implementation complete; Phase 1 gate remains open pending staging journey verification.
+```
+
+## Execution receipt — 3 November 2026 (RR-006)
+
+```text
+Date / actor: 3 November 2026 / Antigravity Agent
+Task ID and checkpoint: RR-006 (Phase 2 — Upload and storage reliability: Observable, backlog-aware cleanup)
+Repository commit + relevant uncommitted scope: HEAD 6c451a7; modified: docs/IMPLEMENTATION-STATUS.md, scripts/cleanup-uploads.ts, src/app/api/maintenance/route.ts, src/features/maintenance/handler.ts, src/features/uploads/cleanup.ts, tests/uploads.test.ts
+Status before → after: not started → implemented-unverified
+Inspected current behavior and files: `src/features/uploads/cleanup.ts` executed an unbounded `updateMany` for expired PENDING versions; maintenance cron scheduled a static 5-item batch without time-budgeted draining; workers deleted storage objects without an atomic lease mechanism, allowing concurrent cron jobs to race destructive deletions; storage errors had no backoff, causing failing rows to immediately starve subsequent cleanup items; `/api/maintenance` lacked operational queue metrics (depth, oldest age).
+Implemented files and migrations (if any):
+  - src/features/uploads/cleanup.ts:
+    - Bounded PENDING transitions to bounded batches (`limit * 2`), preventing table-wide locking during burst activity.
+    - Added atomic worker leases using `processingToken` and `processingUntil` (`leaseMs`), preventing concurrent maintenance jobs from racing destructive deletions.
+    - Added retry backoff (`backoffMs`, default 5 minutes): when storage deletion encounters an error, `cleanupAfter` is pushed forward and the lease is released so other queued rows proceed immediately.
+    - Preserved safety distinction: READY versions delete only `stagingKey` (immutable originals are never deleted); FAILED versions delete both `stagingKey` and `objectKey`.
+    - Added host execution budget draining (`maxDrainBudgetMs`) allowing long-running workers to drain multiple batches safely within runtime limits.
+    - Added index-backed backlog metrics calculation (`pendingExpired`, `readyStaging`, `failedFinal`, `totalQueue`, `oldestAgeSeconds`, `leased`).
+    - Added `dryRun` mode for inspection without mutations.
+  - src/app/api/maintenance/route.ts: configured `maxDrainBudgetMs: 40_000` within 60s maxDuration and batch size 25 to drain backlogs efficiently.
+  - src/features/maintenance/handler.ts: typed and propagated extended backlog metrics in maintenance response and logs.
+  - scripts/cleanup-uploads.ts: added CLI arguments (`--drain`, `--dry-run`, `--limit=N`) and structured output reporting without secrets or object keys.
+  - tests/uploads.test.ts: added 5 unit tests covering bounded PENDING transitions, atomic worker leasing, READY vs FAILED deletion scoping, retry backoff on storage error, index-backed backlog metrics, and dry-run safety.
+Configuration/manual prerequisites; actual changes versus instructions only: Local implementation and automated tests only. No external services or credentials mutated.
+Environment class + non-secret target alias: Local test runner / isolated test environment.
+Commands run and exact pass/fail counts:
+  - `pnpm exec vitest run tests/uploads.test.ts`: passed, 18 tests passed (0 failures).
+  - `pnpm exec vitest run --exclude 'tests/integration/**' --no-cache`: passed, 18 test files passed, 171 tests passed (0 failures).
+  - `pnpm exec tsc --noEmit`: passed with 0 errors.
+  - `pnpm exec eslint . --max-warnings=0`: passed with 0 errors, 0 warnings.
+  - `pnpm format:check`: all files formatted per Prettier code style.
+  - `pnpm check`: (lint + typecheck + test + format:check) passed with exit code 0.
+  - `pnpm db:validate`: Prisma schema valid.
+Manual/browser cases, viewport/device, outcomes: Local automated tests for bounded expiration, worker leases, storage deletion scoping, backoff, and backlog metrics; live scheduled cron execution in staging deferred to staging acceptance.
+Negative authorization + compatibility/race evidence:
+  - Expired PENDING transitions are batch-limited and cannot run unbounded locks.
+  - Concurrent workers with differing lease tokens cannot double-claim or race deletions on the same rows.
+  - Storage deletion errors back off `cleanupAfter` by 5 minutes and clear the lease instead of starving the queue.
+  - Dry run performs index-backed queries without updating database rows or deleting storage objects.
+External writes authorized/performed (or none): None.
+Rollout/rollback constraints: Backwards-compatible function signature; existing `AssetVersion` columns (`processingToken`, `processingUntil`, `cleanedAt`, `cleanupAfter`) are used without schema changes.
+Remaining acceptance gaps and concrete block, if any: Verification with a live deployed Vercel cron and private Supabase storage bucket; status remains implemented-unverified per roadmap rules.
+Phase gate impact: Phase 2 cleanup reliability implemented locally; Phase 2 gate remains open pending usage accounting (RR-007) and retry recovery (RR-008).
 ```

@@ -23,7 +23,19 @@ export async function maintenanceResponse(
     secret?: string;
     cleanup(): Promise<{
       demo: { removed: number };
-      uploads: { examined: number; cleaned: number };
+      uploads: {
+        examined: number;
+        cleaned: number;
+        failed?: number;
+        leased?: number;
+        backlog?: {
+          pendingExpired: number;
+          readyStaging: number;
+          failedFinal: number;
+          totalQueue: number;
+          oldestAgeSeconds: number | null;
+        };
+      };
     }>;
     log(event: { requestId: string; operation: string; status: string }): void;
   },
