@@ -11,6 +11,7 @@ import { withUserDatabase } from "../../src/lib/data/context";
 import {
   requestReview,
   reviewRoundStatus,
+  reviewRoundHistory,
 } from "../../src/lib/data/review-rounds";
 import {
   changeCompletion,
@@ -151,6 +152,29 @@ describe("required reviews, completion and delivery isolation", () => {
     await expect(round([])).rejects.toThrow();
     await round();
     expect((await status()).state).toBe("AWAITING_REVIEW");
+    const history = await scope(ids.client, (tx) =>
+      reviewRoundHistory(tx, ids.client, workspace, project, asset, version),
+    );
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({
+      reason: "Please review the final direction.",
+      requestedByName: "Sample designer",
+      reviewers: expect.arrayContaining([
+        expect.objectContaining({ reviewerName: "Second client" }),
+      ]),
+    });
+    await expect(
+      scope(ids.outsider, (tx) =>
+        reviewRoundHistory(
+          tx,
+          ids.outsider,
+          workspace,
+          project,
+          asset,
+          version,
+        ),
+      ),
+    ).rejects.toThrow();
   });
   it("combines conflicting reviewers, unresolved pins and access changes", async () => {
     await decide(ids.client);

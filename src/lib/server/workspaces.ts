@@ -10,6 +10,7 @@ import { projectFilters } from "@/features/projects/validation";
 import { listAssets } from "@/lib/data/uploads";
 import { getWorkspaceStorageUsage } from "@/lib/data/storage-accounting";
 import { isExistingDemoEmail } from "@/features/reviewer-demo/config";
+import { reviewRoundStatus } from "@/lib/data/review-rounds";
 import { getDb } from "./db";
 
 export async function getUserWorkspaces() {
@@ -75,16 +76,24 @@ export async function getProject(
       workspaceId,
       projectId,
     );
+    const assetDirectory = await listAssets(
+      tx,
+      user.id,
+      workspaceId,
+      projectId,
+      assetPage,
+    );
+    const assets = await Promise.all(
+      assetDirectory.assets.map(async (asset) => ({
+        ...asset,
+        reviewState: (await reviewRoundStatus(tx, asset.currentVersion!.id))
+          .state,
+      })),
+    );
     return {
       project,
       member,
-      assetDirectory: await listAssets(
-        tx,
-        user.id,
-        workspaceId,
-        projectId,
-        assetPage,
-      ),
+      assetDirectory: { ...assetDirectory, assets },
       people:
         member.role === "OWNER"
           ? await assignableMembers(tx, user.id, workspaceId)

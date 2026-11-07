@@ -1,5 +1,9 @@
 import { ReviewRoundPanel } from "@/features/reviews/review-round-panel";
-import { reviewRoundStatus, reviewCandidates } from "@/lib/data/review-rounds";
+import {
+  reviewRoundStatus,
+  reviewCandidates,
+  reviewRoundHistory,
+} from "@/lib/data/review-rounds";
 import Link from "next/link";
 import { OwnerLinks } from "@/features/sharing/owner-links";
 import { versionPage, decisionPage } from "@/lib/data/reviews";
@@ -39,6 +43,14 @@ export default async function ReviewPage({
         ...data,
         userId: user.id,
         round: await reviewRoundStatus(tx, data.version.id),
+        roundHistory: await reviewRoundHistory(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          data.version.id,
+        ),
         candidates:
           data.member.role !== "CLIENT"
             ? await reviewCandidates(tx, projectId)
@@ -190,6 +202,7 @@ export default async function ReviewPage({
         base={base}
         versionId={version.id}
         status={result.round}
+        history={result.roundHistory}
         candidates={result.candidates}
         canRequest={
           member.role !== "CLIENT" &&

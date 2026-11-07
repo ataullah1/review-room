@@ -132,6 +132,18 @@ export default async function ProjectPage({
               </div>
               <div className="asset-card-info">
                 <h3>{asset.title}</h3>
+                <span className="project-state">
+                  {
+                    {
+                      UNCONFIGURED: "Review not requested",
+                      REVIEWERS_REQUIRED: "Reviewer access needs attention",
+                      CHANGES_REQUESTED: "Changes requested",
+                      AWAITING_REVIEW: "Awaiting client review",
+                      FEEDBACK_OPEN: "Feedback needs resolving",
+                      APPROVED: "Approved",
+                    }[asset.reviewState]
+                  }
+                </span>
                 <p>
                   {asset.currentVersion!.width} × {asset.currentVersion!.height}{" "}
                   px ·{" "}

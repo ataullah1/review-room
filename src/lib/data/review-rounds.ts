@@ -73,3 +73,32 @@ export async function reviewCandidates(tx: UserDatabase, projectId: string) {
     { id: string; name: string }[]
   >`SELECT * FROM app.review_candidates(${projectId}::uuid)`;
 }
+
+export async function reviewRoundHistory(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  assetId: string,
+  versionId: string,
+) {
+  await reviewVersion(tx, userId, workspaceId, projectId, assetId, versionId);
+  const rounds = await tx.reviewRound.findMany({
+    where: { workspaceId, projectId, assetId, versionId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    // Request creation caps the entire project's rounds at 100.
+    take: 100,
+    select: {
+      id: true,
+      createdAt: true,
+      requestedByName: true,
+      reason: true,
+      reviewers: { select: { reviewerName: true }, orderBy: { userId: "asc" } },
+    },
+  });
+  return rounds.map((round) => ({
+    ...round,
+    createdAt: round.createdAt.toISOString(),
+  }));
+}
+export type RoundHistory = Awaited<ReturnType<typeof reviewRoundHistory>>;

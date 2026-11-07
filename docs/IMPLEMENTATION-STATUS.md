@@ -448,3 +448,20 @@ Phase gate impact: Storage usage accounting and configurable non-billing limits 
 - Final isolated migration rehearsal: `TEST_DATABASE_URL=<guarded loopback test DB> pnpm db:rehearse` applied **all 22 migrations**, confirmed **27 RLS-enabled application tables**, and removed only its temporary database.
 - Full local integration suite: **94 tests in 12 files passed**, including migration 022; mail was injected/fake. Unit suite: **188 tests in 23 files passed**. TypeScript, ESLint, Prisma validation, Prettier and `git diff --check` passed.
 - Remaining gate is hosted/manual acceptance and full isolated backup restoration, not a claim that local fixtures prove real Supabase SMTP/Auth or deployed browser behavior. No production migration, real email, commit, push or deployment was performed.
+
+## Follow-up — review context and read-only release check (7 November 2026)
+
+- Added version-scoped review request history to the existing review panel: requester, time, reason and frozen required-client names. The same existing local lifecycle test covers authorized reading and outsider denial.
+- Project image cards now show the actual current-version review state (not requested, awaiting clients, changes requested, feedback open, reviewer access issue, approved). Only the current project's paginated visible assets are queried through existing authorization/RLS.
+- No new files or migrations in this follow-up; incoming staged changes were preserved and not restaged/committed.
+- Read-only live migration probe: 14 applied, migrations 015–022 pending (eight). Existing anonymous release smoke: all 17 checks passed. No production data, Auth setting, email or deployment was changed.
+- Focused local lifecycle test: five tests passed, including review-history authorization. No full test/build rerun was needed for this focused UI/data-read update; TypeScript and changed-file lint/format checks are recorded separately.
+- Hosted staging/mail configuration is absent from the available local configuration; SMTP/browser/restore acceptance remains unverified. Coordinate pending migrations with the matching application release; do not apply them to an old running invitation flow as an isolated step.
+
+## Recovery backup receipt — 7 November 2026
+
+- Read-only hosted export completed before any release migration: application, Auth and Storage metadata in an encrypted PostgreSQL custom archive, plus all 13 private bucket objects (12,472,692 bytes).
+- Verified authenticated decryption and the archive catalog; all 13 READY originals matched their database content hashes and sizes. The backend still has 14 applied migrations; 015–022 remain pending.
+- Recovery artifacts are outside Git at `~/ReviewRoom-backups/2026-11-07T04-26-55-126Z/`; `receipt.json` contains the non-secret verification result. AES-256-GCM key material is separate at `~/.review-room-backup-keys/2026-11-07T04-26-55-126Z.key`. Directories and files use owner-only permissions. Do not commit or publish either location.
+- This is a verified encrypted export, **not a completed restore rehearsal**. Provider settings/global roles, off-site recovery, a full isolated Supabase restore and concurrent-write consistency remain unverified. Production writes were not paused during export.
+- No production migration, Auth/Storage mutation, mail delivery, commit, push or deployment was performed. The next release gate remains isolated restoration and hosted acceptance, followed by coordinated migration/publication of compatible code.

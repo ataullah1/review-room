@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import type { RoundStatus } from "@/lib/data/review-rounds";
+import type { RoundStatus, RoundHistory } from "@/lib/data/review-rounds";
 const labels: Record<RoundStatus["state"], string> = {
   UNCONFIGURED: "Review round not configured",
   REVIEWERS_REQUIRED: "Reviewer access needs attention",
@@ -17,12 +17,14 @@ export function ReviewRoundPanel({
   base,
   versionId,
   canRequest,
+  history,
 }: {
   status: RoundStatus;
   candidates: { id: string; name: string }[];
   base: string;
   versionId: string;
   canRequest: boolean;
+  history: RoundHistory;
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState("");
@@ -55,6 +57,42 @@ export function ReviewRoundPanel({
           </li>
         ))}
       </ul>
+      {!!history.length && (
+        <details className="decision-history">
+          <summary>
+            Review request history · {history.length}{" "}
+            {history.length === 1 ? "round" : "rounds"}
+          </summary>
+          <p>
+            Required reviewers are saved with each request. Decisions for this
+            version remain in Client review below.
+          </p>
+          <ol>
+            {history.map((round) => (
+              <li key={round.id}>
+                <strong>
+                  {round.id === status.roundId
+                    ? "Current round"
+                    : "Earlier round"}{" "}
+                  · {round.requestedByName}
+                </strong>
+                <p>
+                  <time dateTime={round.createdAt}>
+                    {new Date(round.createdAt).toISOString()} UTC
+                  </time>
+                </p>
+                <p style={{ whiteSpace: "pre-wrap" }}>{round.reason}</p>
+                <p>
+                  Required clients:{" "}
+                  {round.reviewers
+                    .map((reviewer) => reviewer.reviewerName)
+                    .join(", ")}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       {canRequest && (
         <details>
           <summary>
