@@ -1,3 +1,13 @@
+import { createHash } from "node:crypto";
+import { limitCapability } from "@/features/sharing/rate-limit";
+import { cookies } from "next/headers";
+import {
+  recoveryStartCookie,
+  recoveryGrantCookie,
+  readAuthIntent,
+  signAuthIntent,
+  intentCookieOptions,
+} from "@/lib/auth/intent";
 import { NextResponse, type NextRequest } from "next/server";
 import { authenticate, type AuthOperation } from "@/lib/auth/core";
 import { AuthFlowError } from "@/lib/auth/errors";
@@ -65,6 +75,8 @@ export async function POST(
   try {
     const input = await readBody(request);
     stage = "configuration";
+    if (["resend", "recover"].includes(operation))
+      await limitCapability(getDb(), request.headers, "accept");
     const client = await createAuthClient(true);
     const result = await authenticate(operation as AuthOperation, input, {
       provider: {
@@ -118,7 +130,7 @@ export async function POST(
             type: "signup",
             email,
             options: {
-              emailRedirectTo: `${appOrigin}/auth/callback`,
+              emailRedirectTo: `${appOrigin}/auth/callback?next=${encodeURIComponent(safeReturnPath(input && typeof input === "object" && "next" in input && typeof input.next === "string" ? input.next : undefined))}`,
             },
           });
           return {
@@ -129,6 +141,15 @@ export async function POST(
         async resetPasswordForEmail({ email }) {
           stage = "password_provider";
           const appOrigin = readAppOrigin();
+          (await cookies()).set(
+            recoveryStartCookie,
+            signAuthIntent({
+              kind: "recovery-start",
+              email,
+              expires: Date.now() + 600_000,
+            }),
+            intentCookieOptions,
+          );
           const { error } = await client.auth.resetPasswordForEmail(email, {
             redirectTo: `${appOrigin}/auth/callback?type=recovery`,
           });
@@ -155,6 +176,24 @@ export async function POST(
           const { error } = await client.auth.signOut({ scope: "local" });
           return !error;
         },
+      },
+      async authorizeRecovery(user) {
+        const jar = await cookies();
+        const grant = readAuthIntent(
+          jar.get(recoveryGrantCookie)?.value,
+          "recovery-grant",
+        );
+        const { data } = await client.auth.getClaims();
+        if (
+          !grant?.nonce ||
+          grant.userId !== user.id ||
+          grant.email !== user.email ||
+          grant.sessionId !== data?.claims.session_id
+        )
+          return false;
+        const consumed = await getDb()
+          .$executeRaw`DELETE FROM app."RecoveryGrant" WHERE "tokenHash"=${createHash("sha256").update(grant.nonce).digest("hex")} AND "userId"=${user.id}::uuid AND "sessionId"=${grant.sessionId} AND "expiresAt">NOW()`;
+        return consumed === 1;
       },
       reserveSignup: (email) => {
         stage = "quota_database";
@@ -189,9 +228,23 @@ export async function POST(
       },
       bootstrap: (user, reserved) => {
         stage = "workspace_database";
-        return bootstrapWithQuota(getDb(), user, request.headers, reserved);
+        return bootstrapWithQuota(
+          getDb(),
+          user,
+          request.headers,
+          reserved,
+          !!input &&
+            typeof input === "object" &&
+            "next" in input &&
+            input.next === "/invite/accept",
+        );
       },
     });
+    if (operation === "reset-password" || operation === "logout")
+      (await cookies()).set(recoveryGrantCookie, "", {
+        ...intentCookieOptions,
+        maxAge: 0,
+      });
     return NextResponse.json(result, { headers: privateHeaders });
   } catch (error) {
     const failure = authFailure(error, {

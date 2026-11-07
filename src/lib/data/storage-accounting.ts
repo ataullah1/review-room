@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client";
 import type { UserDatabase } from "./context";
-import { requireWorkspaceMember } from "./permissions";
+import { requireWorkspaceOwner } from "./permissions";
 import { readStorageLimits, type StorageLimits } from "../config/limits";
 import { UploadError } from "../../features/uploads/validation";
 
@@ -39,7 +39,7 @@ export async function getWorkspaceStorageUsage(
   limits: StorageLimits = readStorageLimits(),
   now: Date = new Date(),
 ): Promise<WorkspaceStorageUsage> {
-  await requireWorkspaceMember(tx, userId, workspaceId);
+  await requireWorkspaceOwner(tx, userId, workspaceId);
 
   const [readyAggregate, pendingAggregate] = await Promise.all([
     tx.assetVersion.aggregate({
@@ -81,7 +81,7 @@ export async function getWorkspaceStorageUsage(
   );
   const isOverLimit =
     totalAccountedBytes >= limits.maxStorageBytes ||
-    readyVersionsCount >= limits.maxReadyVersions;
+    readyVersionsCount + pendingUploadsCount >= limits.maxReadyVersions;
 
   return {
     committedBytes,
@@ -104,42 +104,27 @@ export async function assertStorageAvailable(
   expectedNewBytes: number,
   limits: StorageLimits = readStorageLimits(),
   now: Date = new Date(),
-): Promise<WorkspaceStorageUsage> {
-  // Advisory lock per workspace serializes concurrent reservations
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`storage:${workspaceId}`}, 0))::text`;
-
-  const usage = await getWorkspaceStorageUsage(
-    tx,
-    userId,
-    workspaceId,
-    limits,
-    now,
-  );
-
-  if (usage.totalAccountedBytes + expectedNewBytes > usage.maxStorageBytes) {
-    const usedMb = (usage.totalAccountedBytes / (1024 * 1024)).toFixed(1);
-    const limitMb = (usage.maxStorageBytes / (1024 * 1024)).toFixed(0);
-    throw new UploadError(
-      `Workspace storage limit reached (${usedMb} MB of ${limitMb} MB used). Clean up unneeded images before uploading new files.`,
-      429,
-    );
+): Promise<void> {
+  // The definer function sees other uploaders' pending rows without granting
+  // access to their metadata. It serializes the check with the subsequent insert.
+  void userId;
+  void now;
+  try {
+    await tx.$queryRaw`SELECT app.check_workspace_storage(${workspaceId}::uuid, ${expectedNewBytes}::bigint, ${limits.maxStorageBytes}::bigint, ${limits.maxReadyVersions}::integer, ${limits.maxPendingUploads}::integer)::text`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const notice = [
+      "Workspace storage limit reached",
+      "Workspace version limit reached",
+      "Workspace pending upload limit reached",
+    ].find((text) => message.includes(text));
+    if (notice)
+      throw new UploadError(
+        `${notice}. Ask the workspace owner to review capacity or finish pending uploads.`,
+        429,
+      );
+    throw error;
   }
-
-  if (usage.readyVersionsCount + 1 > usage.maxReadyVersions) {
-    throw new UploadError(
-      `Workspace version limit reached (${usage.readyVersionsCount} of ${usage.maxReadyVersions} versions). Delete unneeded images before uploading new files.`,
-      429,
-    );
-  }
-
-  if (usage.pendingUploadsCount >= usage.maxPendingUploads) {
-    throw new UploadError(
-      "Finish or cancel existing pending uploads in this workspace before starting another.",
-      429,
-    );
-  }
-
-  return usage;
 }
 
 export async function reconcileWorkspaceStorage(
@@ -209,7 +194,7 @@ export async function reconcileWorkspaceStorage(
       maxStorageBytes: limits.maxStorageBytes,
       isOverLimit:
         totalAccountedBytes >= limits.maxStorageBytes ||
-        readyVersionsCount >= limits.maxReadyVersions,
+        readyVersionsCount + activePendingCount >= limits.maxReadyVersions,
     });
   }
 

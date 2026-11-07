@@ -308,7 +308,7 @@ describe("private upload lifecycle with real Postgres/RLS", () => {
     ).rejects.toThrow();
     await db.assetVersion.update({
       where: { id: row.id },
-      data: { cleanupAfter: new Date(0) },
+      data: { cleanupAfter: new Date(0), processingUntil: new Date(0) },
     });
     await cleanupUploads(db, storage);
     expect(objects.has(row.stagingKey)).toBe(false);
@@ -386,15 +386,16 @@ describe("private upload lifecycle with real Postgres/RLS", () => {
       where: { id: row.id },
       data: { expiresAt: new Date(0), cleanupAfter: new Date(0) },
     });
-    vi.mocked(storage.remove).mockRejectedValueOnce(
-      new Error("temporary failure"),
-    );
+    vi.mocked(storage.remove).mockRejectedValue(new Error("temporary failure"));
     await cleanupUploads(db, storage);
     expect(
       (await db.assetVersion.findUniqueOrThrow({ where: { id: row.id } }))
         .cleanedAt,
     ).toBeNull();
-    await cleanupUploads(db, storage);
+    vi.mocked(storage.remove).mockImplementation(async (keys) => {
+      keys.forEach((key) => objects.delete(key));
+    });
+    await cleanupUploads(db, storage, 100, new Date(Date.now() + 360000));
     expect(
       (await db.assetVersion.findUniqueOrThrow({ where: { id: row.id } }))
         .cleanedAt,

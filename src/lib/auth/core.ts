@@ -52,10 +52,11 @@ export interface AuthDependencies {
   reserveSignup(email: string): Promise<string>;
   discardPermit(permit: string): Promise<void>;
   assertInstantSignup(): Promise<void>;
+  authorizeRecovery?(user: VerifiedIdentity): Promise<boolean>;
   bootstrap(
     user: VerifiedIdentity,
     quotaReserved: boolean,
-  ): Promise<{ id: string }>;
+  ): Promise<{ id: string } | null>;
 }
 
 export async function authenticate(
@@ -118,6 +119,11 @@ export async function authenticate(
         401,
       );
     }
+    if (!deps.authorizeRecovery || !(await deps.authorizeRecovery(user)))
+      throw new AuthFlowError(
+        "Open a fresh recovery link before resetting your password.",
+        403,
+      );
     if (isExistingDemoEmail(user.email)) {
       throw new AuthFlowError(
         "Password reset is not permitted for demo accounts.",

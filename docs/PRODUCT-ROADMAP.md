@@ -1,6 +1,8 @@
 # Review Room — Product and Development Roadmap
 
-Planning baseline: 2 November 2026, repository HEAD `92f2827`. Companion execution ledger: [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
+Planning baseline: 2 November 2026, repository HEAD `92f2827`.
+
+Execution update (7 November 2026): the first-release source work now extends through RR-018 (excluding optional RR-014), with RR-020 local checks/release preparation underway. See the status ledger for actual results and missing hosted/manual evidence. The baseline and original task specifications below remain the planning reference, not a current claim that implemented upgrades are missing. Companion execution ledger: [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
 
 This document is a plan, not an implementation or permission to change a hosted environment. Read `AGENTS.md` before each task. Preserve unrelated changes. Never edit an applied migration, weaken RLS, expose secrets, or automatically provision, deploy, commit or reset production.
 

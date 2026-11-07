@@ -6,6 +6,7 @@ import {
   publishUpload,
   failUpload,
   findUpload,
+  getUploadStatus,
 } from "../../lib/data/uploads";
 import type { UploadStorage } from "../../lib/storage/client";
 import { validateImage } from "./image";
@@ -59,7 +60,24 @@ export function uploadService(
           mimeType: row.expectedMimeType,
           size: row.expectedSize,
         });
-        await storage.put(row.objectKey, bytes, metadata.mimeType);
+        try {
+          await storage.put(row.objectKey, bytes, metadata.mimeType);
+        } catch (putError) {
+          // Storage put is immutable. An ambiguous earlier success is reusable
+          // only when the canonical original validates to the same hash.
+          const existing = await storage.read(row.objectKey).catch(() => null);
+          if (!existing) throw putError;
+          const stored = await validateImage(existing, {
+            name: row.originalName,
+            mimeType: row.expectedMimeType,
+            size: row.expectedSize,
+          });
+          if (stored.contentHash !== metadata.contentHash)
+            throw new UploadError(
+              "Stored original differs from this upload. Start a fresh upload.",
+              409,
+            );
+        }
         const published = await scoped((tx) =>
           publishUpload(
             tx,
@@ -92,6 +110,12 @@ export function uploadService(
       );
       const row = await fail(versionId, "Upload cancelled.");
       return { cancelled: row.status !== "READY", assetId: row.assetId };
+    },
+    async status(versionId?: string) {
+      const upload = await scoped((tx) =>
+        getUploadStatus(tx, userId, workspaceId, projectId, versionId),
+      );
+      return { upload };
     },
   };
 }

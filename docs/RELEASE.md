@@ -144,3 +144,54 @@ These are user-run release checks on intended accounts/content, not permission t
 Public pageviews for `/`, `/login` and `/signup` use `@vercel/analytics/next`. Query strings and fragments are stripped before sending pageviews; custom events and private, capability and demo routes are excluded. Tracking is mounted only on production deployments. No Analytics environment variable or custom event setup is required.
 
 In Vercel, open the Review Room project → Analytics / Web Analytics → Enable, then deploy the updated code. Visit the production homepage and check the dashboard for incoming pageviews. Dashboard activation and receipt of live events must be verified separately from the build. See the [official quickstart](https://vercel.com/docs/analytics/quickstart).
+
+## Current upgrade — 7 November 2026 (supersedes historical counts/settings above)
+
+The repository now contains **22 migrations and 27 application tables**. New migrations 015–022 add mailbox/recovery proof, project metadata, dedicated cleanup leases, required review rounds, frozen completion/reopening records, a private notification outbox and permission-safe reviewer discovery. Existing versions/decisions are preserved; old individual approvals are not silently converted into final sign-off.
+
+### Release order and compatibility
+
+1. Back up database/Auth/configuration **and original Storage bytes**; inspect the intended target and rehearse on an isolated staging project. The local rehearsal is not a production recovery receipt.
+2. Set the existing application origin, matching Auth/database project, verified database CA, stable signing secret and private bucket. Preserve separate Preview/hosted-test targets. Application mail remains disabled unless deliberately configured below.
+3. Apply pending migrations through the operator's trusted session/direct connection with `pnpm db:deploy`, then generate/build the new client/application. Do not run `db push`, development seed/reset or the integration harness against production. Builds do not migrate.
+4. Publish the compatible application only after staging acceptance. New invitation acceptance requires recorded fresh mailbox proof; existing memberships remain valid. Old code cannot bypass new completed-project DB barriers, but its UI may be confusing; avoid mixing old writers with enabled completion features.
+5. Confirm the actual SMTP/Auth settings and controlled inbox flow, then enable optional application mail. Verify the three-role workflow and owner usage meter. No commit, push, deployment, production migration or Dashboard change was performed by this implementation.
+
+### Identity, verification and recovery
+
+Recommended deployment policy: **Supabase Dashboard → Authentication → Sign In / Providers → Email → Confirm email ON**. The code now supports pending-verification signup. Changing the Dashboard is a manual operator action; preserve existing users rather than mass-resetting their confirmation timestamps. Configure **Authentication → Email → SMTP Settings** (the custom SMTP section) with your own verified sender, and test signup confirmation, magic-link verification and recovery templates using controlled inboxes. Supabase navigation labels can vary; no provider account/settings change is implied by this document.
+
+**Authentication → URL Configuration:** Site URL must equal this installation's `NEXT_PUBLIC_APP_URL`; allow its exact `/auth/callback` destination and preserve the legitimate return/type query parameters. Google uses the existing provider setup and server-verified identity, not editable user metadata. Before User Created remains `app.before_user_created`; do not disable the signup hook to work around configuration failures.
+
+Existing auto-confirmed users retain current project access. Before accepting a new invitation, use **Verify my email** on the acceptance page. A successful provider code/token callback records email-bound proof for one day. A timestamp from an old auto-confirmed password account alone is insufficient. Email changes invalidate the recorded hash. Recovery needs a short-lived, session-bound, single-use grant; an ordinary logged-in session cannot invoke the password reset endpoint. Public demo credentials/MFA protections remain.
+
+### Application notifications (optional transport; no new queue service)
+
+Supabase Auth SMTP handles verification and password recovery. Review Room application messages use a separate HTTPS transactional API with a Resend-compatible `{from,to,subject,text}` body and an `Idempotency-Key` header:
+
+- `MAIL_ENABLED=true` only when sender and transport are ready; default is false.
+- `MAIL_API_URL`: your provider's HTTPS send endpoint.
+- `MAIL_API_KEY`: private provider credential, server-only.
+- `MAIL_FROM`: verified sender address accepted by your provider.
+- `MAIL_PAYLOAD_SECRET`: independent 32-byte hex encryption key. Generate locally for a new installation with `openssl rand -hex 32`; never reuse a demo password or another server secret.
+
+The code does not create a provider account or guarantee a free plan. With application mail off, copy/send invitation links remains functional; no send is claimed. With it on, business data and durable delivery intent commit in the same transaction, then a bounded post-response worker attempts delivery. SMTP/API failure cannot roll back the saved invitation, review round, comment or decision. Encryption configuration must be valid before enabling mail.
+
+Invitation secrets are encrypted in the private outbox, never recoverable from the invitation hash. The worker rechecks source expiry/revocation/replacement, current project access, required recipients and opt-out before dispatch. Self-notifications and public demo recipients are excluded. Provider idempotency support is required for ambiguous retries; external exactly-once delivery is not promised. Five failures exhaust a job. Terminal/expired jobs clear encrypted payloads; keep the encryption key until remaining jobs expire or drain before rotating it. Owner invitation UI distinguishes queued/delivered/retry/manual states. Delivery means provider acceptance, not inbox placement.
+
+Review mail can be muted from the workspace chooser. Invitation and security mail are separate. New versions do not automatically email everyone: use **Request review**, choose assigned clients and provide instructions. Comments/replies and decisions enqueue minimal authenticated links without image bytes or full private feedback text.
+
+### Workflow and delivery policy
+
+A review round freezes required clients for a specific current version. All must record a new approval after that round was requested; a changes request, missing reviewer/access or unresolved current root comment blocks final approval. Starting a fresh round retains old rounds and requires fresh decisions. Removing project access does not silently grant approval.
+
+Owner completion requires every current visible design to have qualifying approval and resolved feedback. Completion freezes exact version IDs, hashes and reviewer outcomes. Upload/finalize, feedback, new decisions, reviewer changes and new invitations require reopening. Owner can still revoke links/remove access and archive. Reopening requires a reason and retains old delivery snapshots.
+
+Delivery provides approved originals through short-lived attachment URLs, a printable summary (browser Print / Save PDF), and JSON manifest. It never packages preview images as originals, exports signed URLs or claims a legal electronic signature. Original file metadata is retained. ZIP packages, bulk upload, PDF/video/Figma support and destructive asset purge remain deferred per roadmap.
+
+### Remaining acceptance before public release
+
+- Isolated hosted Auth/SMTP and three-role browser journeys, actual mobile/keyboard/print/download checks.
+- Production-host cleanup/mail timing and queued/retry visibility with controlled test traffic.
+- Restore database + relevant Auth identities/config + original Storage bytes into a separate isolated project; verify hashes, permissions and completed deliveries.
+- Complete `docs/IMPLEMENTATION-STATUS.md` evidence before marking any hosted release verified. Local PostgreSQL fixtures are not real Supabase Auth accounts.

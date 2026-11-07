@@ -1,3 +1,4 @@
+import { enqueueProjectEvent } from "../../features/notifications/enqueue";
 import { z } from "zod";
 import type { Comment } from "../../generated/prisma/client";
 import type { UserDatabase } from "./context";
@@ -187,11 +188,18 @@ export async function createComment(
     });
     threadNumber = (last._max.threadNumber || 0) + 1;
   }
-  return commentView(
-    await tx.comment.create({
-      data: { ...data, versionId, authorId: userId, threadNumber },
-    }),
+  const created = await tx.comment.create({
+    data: { ...data, versionId, authorId: userId, threadNumber },
+  });
+  await enqueueProjectEvent(
+    tx,
+    workspaceId,
+    projectId,
+    userId,
+    "COMMENT",
+    created.id,
   );
+  return commentView(created);
 }
 export async function resolveComment(
   tx: UserDatabase,

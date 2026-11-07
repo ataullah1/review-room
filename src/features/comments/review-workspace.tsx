@@ -6,6 +6,7 @@ import {
   type PointerEvent,
   type FormEvent,
 } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Plus,
@@ -38,6 +39,7 @@ export function ReviewWorkspace({
   canResolve,
   readOnly,
   feedbackUrl,
+  draftScope,
 }: {
   base: string;
   versionId: string;
@@ -49,6 +51,7 @@ export function ReviewWorkspace({
   canResolve: boolean;
   readOnly: boolean;
   feedbackUrl?: string;
+  draftScope?: string;
 }) {
   const [threads, setThreads] = useState(initial.threads),
     [next, setNext] = useState(initial.next),
@@ -81,6 +84,64 @@ export function ReviewWorkspace({
   const endpoint = feedbackUrl
     ? `${feedbackUrl}?versionId=${encodeURIComponent(versionId)}`
     : `${base}/comments?versionId=${encodeURIComponent(versionId)}`;
+
+  const router = useRouter();
+  const draftKey = draftScope
+    ? `review-room:draft:${draftScope}:${versionId}`
+    : null;
+  const [recoverable, setRecoverable] = useState<Draft | null>(null);
+  const draftLoaded = useRef(false);
+  useEffect(() => {
+    draftLoaded.current = false;
+    queueMicrotask(() => {
+      try {
+        const stored = draftKey
+          ? JSON.parse(sessionStorage.getItem(draftKey) || "null")
+          : null;
+        if (
+          stored?.expires > Date.now() &&
+          typeof stored.draft?.body === "string" &&
+          stored.draft.body.length <= 2000 &&
+          /^[0-9a-f-]{36}$/.test(stored.draft.id) &&
+          [stored.draft.xRatio, stored.draft.yRatio].every(
+            (value) => typeof value === "number" && value >= 0 && value <= 1,
+          )
+        )
+          setRecoverable(stored.draft);
+        else if (draftKey) sessionStorage.removeItem(draftKey);
+      } catch {
+        /* Private-mode storage may be unavailable. */
+      }
+      draftLoaded.current = true;
+    });
+  }, [draftKey]);
+  useEffect(() => {
+    if (!draftKey || !draftLoaded.current) return;
+    try {
+      if (draft?.body)
+        sessionStorage.setItem(
+          draftKey,
+          JSON.stringify({ draft, expires: Date.now() + 3600000 }),
+        );
+      else if (!recoverable) sessionStorage.removeItem(draftKey);
+    } catch {
+      /* Draft remains in memory. */
+    }
+  }, [draft, draftKey, recoverable]);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [router]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      setThreads(initial.threads);
+      setNext(initial.next);
+      setTotal(initial.total);
+    });
+  }, [initial]);
 
   useEffect(() => {
     const node = viewport.current;
@@ -235,6 +296,8 @@ export function ReviewWorkspace({
       );
       if (!threads.some((row) => row.id === comment.id)) setTotal((n) => n + 1);
       setDraft(null);
+      setRecoverable(null);
+      if (draftKey) sessionStorage.removeItem(draftKey);
       setSelected(comment.id);
       setReply({ id: crypto.randomUUID(), body: "" });
     } catch (error) {
@@ -356,6 +419,39 @@ export function ReviewWorkspace({
   }
   return (
     <div className="review-workspace">
+      {recoverable && (
+        <div className="project-notice" role="status">
+          <p>
+            An unsaved comment for this version is available in this tab. Drafts
+            expire after one hour; avoid using shared devices.
+          </p>
+          <Button
+            disabled={readOnly}
+            onClick={() => {
+              setDraft(recoverable);
+              setRecoverable(null);
+            }}
+          >
+            Restore draft
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (draftKey) sessionStorage.removeItem(draftKey);
+              setRecoverable(null);
+            }}
+          >
+            Discard draft
+          </Button>
+          {readOnly && (
+            <p>
+              This historical version is read only. Copy your draft text before
+              reviewing a newer version.
+            </p>
+          )}
+          <p style={{ whiteSpace: "pre-wrap" }}>{recoverable.body}</p>
+        </div>
+      )}
       <section className="review-canvas-panel" aria-label="Image review canvas">
         <div className="review-canvas-toolbar">
           <span>

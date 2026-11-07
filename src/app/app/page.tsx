@@ -1,3 +1,4 @@
+import { NotificationPreferences } from "@/features/notifications/preferences";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AccessError } from "@/lib/auth/errors";
@@ -15,9 +16,14 @@ export default async function WorkspacePage() {
   const { user, memberships } = result;
   return (
     <section className="private-content">
+      <NotificationPreferences />
       <span className="eyebrow">YOUR WORKSPACES</span>
       <h1>A space for your work.</h1>
       <p>Signed in as {user.email}</p>
+      <p>
+        Choose a workspace to see its projects. Invited collaborators only see
+        projects assigned to them.
+      </p>
       {memberships.length ? (
         <div className="workspace-list">
           {memberships.map(({ workspace, role }) => (

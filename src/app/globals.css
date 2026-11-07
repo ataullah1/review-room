@@ -4124,3 +4124,23 @@ h1 > span {
   font-size: 12px;
   line-height: 1.8;
 }
+
+@media print {
+  .private-app > header,
+  .reviewer-demo-notice,
+  .delivery-summary > a,
+  .delivery-summary .upload-actions {
+    display: none !important;
+  }
+  .delivery-summary {
+    max-width: none;
+    padding: 0;
+    color: #000;
+  }
+  .delivery-summary li {
+    break-inside: avoid;
+  }
+  .delivery-summary a {
+    display: none;
+  }
+}

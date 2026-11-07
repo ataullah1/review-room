@@ -1,3 +1,4 @@
+import { enqueueProjectEvent } from "../../features/notifications/enqueue";
 import type { ReviewDecision } from "../../generated/prisma/client";
 import type { UserDatabase } from "./context";
 import type { DecisionPage, VersionPage } from "../../features/reviews/types";
@@ -110,15 +111,22 @@ export async function submitDecision(
       "A newer version is available. Refresh and review the current version.",
       409,
     );
-  return decisionView(
-    await tx.reviewDecision.create({
-      data: {
-        id: data.id,
-        versionId: data.expectedCurrentVersionId,
-        reviewerId: userId,
-        decision: data.decision,
-        note: data.note,
-      },
-    }),
+  const created = await tx.reviewDecision.create({
+    data: {
+      id: data.id,
+      versionId: data.expectedCurrentVersionId,
+      reviewerId: userId,
+      decision: data.decision,
+      note: data.note,
+    },
+  });
+  await enqueueProjectEvent(
+    tx,
+    workspaceId,
+    projectId,
+    userId,
+    "DECISION",
+    created.id,
   );
+  return decisionView(created);
 }

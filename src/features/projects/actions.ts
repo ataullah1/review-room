@@ -8,6 +8,7 @@ import { withUserDatabase } from "@/lib/data/context";
 import { actionFailure } from "@/lib/server/diagnostics";
 import {
   createProject,
+  updateProjectDetails,
   updateProjectMembers,
   removeProjectMember,
   setProjectArchived,
@@ -21,7 +22,8 @@ export type ProjectActionState = {
 export async function mutateProject(
   workspaceId: string,
   projectId: string | null,
-  operation: "create" | "members" | "remove-member" | "archive" | "restore",
+  operation:
+    "create" | "members" | "remove-member" | "details" | "archive" | "restore",
   _previous: ProjectActionState,
   form: FormData,
 ): Promise<ProjectActionState> {
@@ -37,6 +39,14 @@ export async function mutateProject(
           memberIds: form.getAll("memberIds"),
         });
       if (!projectId) throw new AccessError();
+      if (operation === "details") {
+        await updateProjectDetails(tx, user.id, workspaceId, projectId, {
+          name: form.get("name"),
+          description: form.get("description") || "",
+          dueDate: form.get("dueDate") || "",
+        });
+        return { id: projectId };
+      }
       if (operation === "members")
         await updateProjectMembers(tx, user.id, workspaceId, projectId, {
           memberIds: form.getAll("memberIds"),

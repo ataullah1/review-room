@@ -191,3 +191,68 @@ export function ArchiveProjectForm({
     </form>
   );
 }
+
+export function ProjectDetailsForm({
+  workspaceId,
+  projectId,
+  name,
+  description,
+  dueDate,
+}: {
+  workspaceId: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  dueDate: string;
+}) {
+  const [state, action, pending] = useActionState(
+    mutateProject.bind(null, workspaceId, projectId, "details"),
+    {},
+  );
+  return (
+    <details className="new-version-panel">
+      <summary>Project details</summary>
+      <form action={action} className="project-form">
+        <label className="project-field">
+          Project name
+          <input
+            name="name"
+            defaultValue={name}
+            required
+            minLength={2}
+            maxLength={150}
+            disabled={pending}
+          />
+        </label>
+        <label className="project-field">
+          Brief / description
+          <textarea
+            name="description"
+            defaultValue={description || ""}
+            maxLength={2000}
+            rows={3}
+            disabled={pending}
+          />
+        </label>
+        <label className="project-field">
+          Due date (optional)
+          <input
+            name="dueDate"
+            type="date"
+            defaultValue={dueDate}
+            disabled={pending}
+          />
+        </label>
+        {state.error && (
+          <p role="alert" className="auth-error">
+            {state.error}
+          </p>
+        )}
+        {state.success && <p role="status">Details saved.</p>}
+        <Button disabled={pending}>
+          {pending ? "Saving…" : "Save details"}
+        </Button>
+      </form>
+    </details>
+  );
+}

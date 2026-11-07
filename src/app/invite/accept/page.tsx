@@ -1,3 +1,4 @@
+import { VerifyInviteEmail } from "@/features/sharing/verify-email";
 import { Brand } from "@/components/brand";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
@@ -60,6 +61,7 @@ export default async function Page() {
             Signed in as {user.email}.{" "}
             {!user.emailVerified && "Confirm your email before accepting."}
           </p>
+          <VerifyInviteEmail />
           <AcceptInvitation />
           <Link href="/login?next=%2Finvite%2Faccept">
             Use a different account

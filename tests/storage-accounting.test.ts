@@ -97,107 +97,31 @@ describe("workspace storage usage accounting (RR-007)", () => {
 
   it("assertStorageAvailable serializes under workspace advisory lock and accepts valid uploads", async () => {
     const tx = makeMockTx();
-    const result = await assertStorageAvailable(
-      tx,
-      userId,
-      workspaceId,
-      5 * 1024 * 1024, // 5 MB upload
-      {
-        maxStorageBytes: 100 * 1024 * 1024,
-        maxReadyVersions: 50,
-        maxPendingUploads: 5,
-      },
-    );
-
-    expect(result.totalAccountedBytes).toBe(60 * 1024 * 1024);
+    await assertStorageAvailable(tx, userId, workspaceId, 1024);
     expect(tx.$queryRaw).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.stringContaining("SELECT pg_advisory_xact_lock"),
+        expect.stringContaining("check_workspace_storage"),
       ]),
-      expect.anything(),
+      workspaceId,
+      1024,
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
     );
   });
-
-  it("assertStorageAvailable rejects new reservation when byte limit would be exceeded", async () => {
-    const tx = makeMockTx();
-
-    await expect(
-      assertStorageAvailable(
-        tx,
-        userId,
-        workspaceId,
-        45 * 1024 * 1024, // 60MB current + 45MB = 105MB > 100MB
-        {
-          maxStorageBytes: 100 * 1024 * 1024,
-          maxReadyVersions: 50,
-          maxPendingUploads: 5,
-        },
-      ),
-    ).rejects.toMatchObject({
-      status: 429,
-      message: expect.stringContaining("Workspace storage limit reached"),
-    });
-  });
-
-  it("assertStorageAvailable rejects when ready version count limit would be exceeded", async () => {
+  it.each([
+    "Workspace storage limit reached",
+    "Workspace version limit reached",
+    "Workspace pending upload limit reached",
+  ])("maps the database capacity check: %s", async (notice) => {
     const tx = makeMockTx({
-      assetVersion: {
-        aggregate: vi.fn().mockImplementation(({ where }) => {
-          if (where.status === "READY") {
-            return Promise.resolve({
-              _sum: { fileSize: 10 * 1024 * 1024 },
-              _count: { id: 50 }, // at limit
-            });
-          }
-          return Promise.resolve({ _sum: {}, _count: { id: 0 } });
-        }),
-      },
+      $queryRaw: vi.fn().mockRejectedValue(new Error(notice)),
     });
-
     await expect(
-      assertStorageAvailable(tx, userId, workspaceId, 1024, {
-        maxStorageBytes: 100 * 1024 * 1024,
-        maxReadyVersions: 50,
-        maxPendingUploads: 5,
-      }),
+      assertStorageAvailable(tx, userId, workspaceId, 1024),
     ).rejects.toMatchObject({
       status: 429,
-      message: expect.stringContaining("Workspace version limit reached"),
-    });
-  });
-
-  it("assertStorageAvailable rejects when workspace pending uploads limit is reached", async () => {
-    const tx = makeMockTx({
-      assetVersion: {
-        aggregate: vi.fn().mockImplementation(({ where }) => {
-          if (where.status === "READY") {
-            return Promise.resolve({
-              _sum: { fileSize: 10 * 1024 * 1024 },
-              _count: { id: 5 },
-            });
-          }
-          if (where.status === "PENDING") {
-            return Promise.resolve({
-              _sum: { expectedSize: 5 * 1024 * 1024 },
-              _count: { id: 5 }, // 5 active pending reservations
-            });
-          }
-          return Promise.resolve({ _sum: {}, _count: { id: 0 } });
-        }),
-      },
-    });
-
-    await expect(
-      assertStorageAvailable(tx, userId, workspaceId, 1024, {
-        maxStorageBytes: 100 * 1024 * 1024,
-        maxReadyVersions: 50,
-        maxPendingUploads: 5,
-      }),
-    ).rejects.toMatchObject({
-      status: 429,
-      message: expect.stringContaining(
-        "Finish or cancel existing pending uploads",
-      ),
+      message: expect.stringContaining(notice),
     });
   });
 

@@ -32,6 +32,14 @@ On the existing backend, after the three manually created demo accounts are seed
 
 Login opens the workspace chooser, then visitors select the demo workspace and a project. This is separate from the signup-free `/demo` sandbox. The explicit operator script seeds only the three owner-authorized accounts on the existing backend. See [DEMO_SETUP.md](DEMO_SETUP.md) for installation, restoration, limits and verification.
 
+## Current workflow upgrade
+
+The current source includes verification-aware signup/recovery, explicit project access removal, backlog-aware cleanup, workspace storage limits, interrupted-upload status recovery, project brief/deadline editing and scoped comment draft recovery.
+
+Request a review to select required clients for an exact version. Every required client must approve and current feedback must be resolved before the owner completes a project. Completion freezes a delivery manifest; reopening preserves the previous delivery history. Download approved originals, export the JSON manifest, or print the approval summary. Legacy individual decisions remain visible without being silently treated as a final sign-off.
+
+Application email delivery is optional and disabled by default. Configured installations use a private encrypted outbox with bounded retries; mail failures do not undo saved work. Supabase Auth SMTP is configured separately. See [current release instructions](docs/RELEASE.md#current-upgrade--7-november-2026-supersedes-historical-countssettings-above) and [implementation status](docs/IMPLEMENTATION-STATUS.md). New hosted behavior is not claimed verified merely because source/local tests pass.
+
 ## How it is built
 
 One Next.js App Router application serves the UI and backend. Supabase supplies Auth and private Storage; Prisma's PostgreSQL adapter handles application data.

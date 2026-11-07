@@ -26,6 +26,7 @@ export async function withUserDatabase<T>(
     // Expose only our fixed demo guidance, never the database error/query.
     const message = error instanceof Error ? error.message : "";
     const notices = [
+      "Reopen this completed project before changing its work.",
       "Shared demo: project management, invitations and sharing are read only.",
       "Shared demo daily limit reached. Try again tomorrow.",
       "Shared demo upload capacity reached. Contact the demo operator.",

@@ -25,6 +25,7 @@ function dependencies() {
     },
     reserveSignup: vi.fn().mockResolvedValue("one-use-permit"),
     discardPermit: vi.fn().mockResolvedValue(undefined),
+    authorizeRecovery: vi.fn().mockResolvedValue(true),
     assertInstantSignup: vi.fn().mockResolvedValue(undefined),
     bootstrap: vi.fn().mockResolvedValue({ id: "workspace-id" }),
   } satisfies AuthDependencies;

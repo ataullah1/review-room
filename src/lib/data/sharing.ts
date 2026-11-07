@@ -1,3 +1,5 @@
+import { enqueueMail } from "../../features/notifications/enqueue";
+import { mailEnabled } from "../../features/notifications/crypto";
 import type { PrismaClient } from "../../generated/prisma/client";
 import type { UserDatabase } from "./context";
 import { AccessError } from "../auth/errors";
@@ -100,7 +102,20 @@ export async function createInvitation(
         expiresAt: await expiry(tx, 7),
       },
     });
-  return { id: row.id, token, expiresAt: row.expiresAt.toISOString() };
+  const queued = await enqueueMail(tx, {
+    workspaceId,
+    projectId,
+    kind: "INVITATION",
+    sourceId: row.id,
+    payload: { invitationId: row.id, email: row.email, token },
+    expiresAt: row.expiresAt,
+  });
+  return {
+    id: row.id,
+    token,
+    expiresAt: row.expiresAt.toISOString(),
+    delivery: queued ? "queued" : "manual",
+  };
 }
 export async function replaceInvitation(
   tx: UserDatabase,
@@ -164,7 +179,20 @@ export async function replaceInvitation(
       expiresAt: await expiry(tx, 7),
     },
   });
-  return { id: row.id, token, expiresAt: row.expiresAt.toISOString() };
+  const queued = await enqueueMail(tx, {
+    workspaceId,
+    projectId,
+    kind: "INVITATION",
+    sourceId: row.id,
+    payload: { invitationId: row.id, email: row.email, token },
+    expiresAt: row.expiresAt,
+  });
+  return {
+    id: row.id,
+    token,
+    expiresAt: row.expiresAt.toISOString(),
+    delivery: queued ? "queued" : "manual",
+  };
 }
 export async function listInvitations(
   tx: UserDatabase,
@@ -173,7 +201,7 @@ export async function listInvitations(
   projectId: string,
 ) {
   await requireProjectRole(tx, userId, workspaceId, projectId, ["OWNER"]);
-  return tx.projectInvitation.findMany({
+  const invitations = await tx.projectInvitation.findMany({
     where: { workspaceId, projectId },
     select: {
       id: true,
@@ -190,6 +218,36 @@ export async function listInvitations(
       { id: "desc" },
     ],
     take: 50,
+  });
+  const jobs = mailEnabled()
+    ? await tx.notificationJob.findMany({
+        where: {
+          sourceId: { in: invitations.map((i) => i.id) },
+          kind: "INVITATION",
+        },
+        select: {
+          sourceId: true,
+          sentAt: true,
+          cancelledAt: true,
+          lastCode: true,
+          attempts: true,
+        },
+      })
+    : [];
+  return invitations.map((invitation) => {
+    const job = jobs.find((j) => j.sourceId === invitation.id);
+    return {
+      ...invitation,
+      delivery: job?.sentAt
+        ? "delivered"
+        : job?.cancelledAt
+          ? "not delivered"
+          : job?.attempts
+            ? "retry pending"
+            : job
+              ? "queued"
+              : "manual",
+    };
   });
 }
 export async function revokeInvitation(

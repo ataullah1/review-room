@@ -56,7 +56,7 @@ export function capabilityFailure(
     },
   });
 }
-export async function readCapabilityJson(request: Request) {
+export async function readCapabilityJson(request: Request, maxBytes = 2048) {
   const reader = request.body?.getReader();
   if (!reader) throw new AccessError("Invalid request.", 400);
   const chunks: Uint8Array[] = [];
@@ -66,7 +66,7 @@ export async function readCapabilityJson(request: Request) {
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 2048) throw new AccessError("Request is too large.", 413);
+      if (size > maxBytes) throw new AccessError("Request is too large.", 413);
       chunks.push(value);
     }
   } finally {

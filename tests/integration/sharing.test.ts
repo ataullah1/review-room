@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { beforeAll, afterAll, it, expect, describe } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client";
@@ -71,6 +71,15 @@ const accept = (
 let assetId: string, versionId: string, rootId: string, otherVersion: string;
 beforeAll(async () => {
   await seedDevelopmentDatabase(db);
+  await db.emailVerificationProof.createMany({
+    data: [recipient, differentUser].map((userId) => ({
+      userId,
+      emailHash: createHash("sha256")
+        .update("person@example.test")
+        .digest("hex"),
+      expiresAt: new Date(Date.now() + 86400_000),
+    })),
+  });
   await db.userProfile.createMany({
     data: [
       { id: recipient, displayName: "Invited person" },
@@ -146,6 +155,9 @@ beforeAll(async () => {
     );
 });
 afterAll(async () => {
+  await db.emailVerificationProof.deleteMany({
+    where: { userId: { in: [recipient, differentUser] } },
+  });
   await db.project.deleteMany({
     where: { id: { in: [projectId, secondProject] } },
   });
@@ -239,8 +251,9 @@ describe("project invitations and version-only read capabilities", () => {
       revokeInvitation(tx, ids.owner, ids.workspace, projectId, revoked.id),
     );
     await expect(accept(revoked.token)).rejects.toMatchObject({ status: 410 });
-    const conflict = await invite("person@example.test", "DESIGNER");
-    await expect(accept(conflict.token)).rejects.toMatchObject({ status: 409 });
+    await expect(
+      invite("person@example.test", "DESIGNER"),
+    ).rejects.toMatchObject({ status: 409 });
     expect(
       await db.projectMember.count({ where: { projectId, userId: recipient } }),
     ).toBe(0);

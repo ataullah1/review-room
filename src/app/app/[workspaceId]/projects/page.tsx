@@ -107,6 +107,12 @@ export default async function ProjectsPage({
             Active projects
           </Link>
           <Link
+            href={listUrl("completed")}
+            aria-current={filters.status === "completed" ? "page" : undefined}
+          >
+            Completed
+          </Link>
+          <Link
             href={listUrl("archived")}
             aria-current={filters.status === "archived" ? "page" : undefined}
           >

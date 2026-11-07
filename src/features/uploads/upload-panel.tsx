@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   UploadCloud,
@@ -9,6 +9,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { UploadStatus } from "@/lib/data/uploads";
 import { uploadInput } from "./validation";
 type Stage =
   | "idle"
@@ -30,7 +31,8 @@ export function UploadPanel({
   const [file, setFile] = useState<File | null>(null),
     [stage, setStage] = useState<Stage>("idle"),
     [progress, setProgress] = useState(0),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [recovery, setRecovery] = useState<UploadStatus | null>(null);
   const active = useRef<{
       xhr?: XMLHttpRequest;
       controller?: AbortController;
@@ -41,6 +43,70 @@ export function UploadPanel({
     input = useRef<HTMLInputElement>(null);
   const busy = ["preparing", "uploading", "checking"].includes(stage);
   const base = `/app/${workspaceId}/projects/${projectId}/uploads`;
+  const recoveryKey = `review-room:upload:${workspaceId}:${projectId}:${assetId || "new"}`;
+  function remember(versionId?: string) {
+    try {
+      if (versionId) sessionStorage.setItem(recoveryKey, versionId);
+      else sessionStorage.removeItem(recoveryKey);
+    } catch {
+      /* Server status remains authoritative. */
+    }
+  }
+  useEffect(() => {
+    let stopped = false;
+    const load = async () => {
+      try {
+        const id = sessionStorage.getItem(recoveryKey);
+        if (!id) return;
+        const response = await fetch(
+          `${base}/status?versionId=${encodeURIComponent(id)}`,
+          { cache: "no-store" },
+        );
+        const data = await response.json();
+        if (!stopped && response.ok) setRecovery(data.upload);
+        if ([403, 404].includes(response.status))
+          sessionStorage.removeItem(recoveryKey);
+      } catch {
+        /* User can explicitly check again after a network failure. */
+      }
+    };
+    void load();
+    return () => {
+      stopped = true;
+    };
+  }, [base, recoveryKey]);
+  async function checkPrevious(versionId: string) {
+    const response = await fetch(
+      `${base}/status?versionId=${encodeURIComponent(versionId)}`,
+      { cache: "no-store" },
+    );
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.error || "Could not check upload status.");
+    setRecovery(data.upload);
+    return data.upload as UploadStatus;
+  }
+  async function recoverUpload(finalize: boolean) {
+    if (!recovery || busy) return;
+    setStage("checking");
+    setError("");
+    try {
+      const saved = finalize
+        ? await post("finalize", { versionId: recovery.versionId })
+        : await checkPrevious(recovery.versionId);
+      if (finalize || saved.status === "READY") {
+        remember();
+        setRecovery(null);
+        setStage("success");
+        router.refresh();
+      } else setStage("idle");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Could not recover upload.",
+      );
+      setStage("failed");
+    }
+  }
   async function post(operation: string, body: unknown, signal?: AbortSignal) {
     const response = await fetch(`${base}/${operation}`, {
       method: "POST",
@@ -92,6 +158,7 @@ export function UploadPanel({
         size: file.size,
       });
       job.versionId = prepared.versionId;
+      remember(prepared.versionId);
       if (job.cancelled) {
         await post("cancel", { versionId: prepared.versionId });
         return;
@@ -129,6 +196,8 @@ export function UploadPanel({
         job.controller?.signal,
       );
       if (job.cancelled || active.current !== job) return;
+      remember();
+      setRecovery(null);
       setStage("success");
       setFile(null);
       if (input.current) input.current.value = "";
@@ -138,15 +207,17 @@ export function UploadPanel({
         );
       router.refresh();
     } catch (error) {
-      const cancellation = job.versionId
-        ? await post("cancel", { versionId: job.versionId }).catch(() => null)
-        : null;
       if (active.current !== job) return;
-      if (cancellation?.cancelled === false) {
-        setStage("success");
-        setFile(null);
-        router.refresh();
-        return;
+      if (job.versionId && !job.cancelled) {
+        const status = await checkPrevious(job.versionId).catch(() => null);
+        if (status?.status === "READY") {
+          remember();
+          setRecovery(null);
+          setStage("success");
+          setFile(null);
+          router.refresh();
+          return;
+        }
       }
       if (job.cancelled) {
         setStage("cancelled");
@@ -175,6 +246,8 @@ export function UploadPanel({
           }
         })
         .catch(() => undefined);
+    remember();
+    setRecovery(null);
     setStage("cancelled");
     setError("");
   }
@@ -199,6 +272,52 @@ export function UploadPanel({
           </p>
         </div>
       </div>
+      {recovery && (
+        <div className="project-notice" role="status">
+          <strong>Previous upload: {recovery.originalName}</strong>
+          <p>
+            {recovery.status === "READY"
+              ? "This image was already published."
+              : recovery.status === "PROCESSING"
+                ? "Your image is still being checked. Check its status before starting again."
+                : recovery.nextAction === "restart"
+                  ? recovery.failureReason || "Start a fresh upload."
+                  : "An upload was interrupted. Retry checking it if the file finished uploading."}
+          </p>
+          <div className="upload-actions">
+            {recovery.canRetry && (
+              <Button disabled={busy} onClick={() => void recoverUpload(true)}>
+                Retry checking image
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => void recoverUpload(false)}
+            >
+              Check status
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={async () => {
+                if (recovery.canCancel) {
+                  try {
+                    await post("cancel", { versionId: recovery.versionId });
+                  } catch {
+                    setError("Could not cancel. Check status and try again.");
+                    return;
+                  }
+                }
+                remember();
+                setRecovery(null);
+              }}
+            >
+              Dismiss{recovery.canCancel ? " and cancel" : ""}
+            </Button>
+          </div>
+        </div>
+      )}
       <label className={`upload-dropzone${busy ? " is-busy" : ""}`}>
         <UploadCloud size={24} />
         <strong>{file?.name || "Choose an image to upload"}</strong>

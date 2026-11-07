@@ -282,7 +282,7 @@ describe("observable backlog-aware cleanup (RR-006)", () => {
     const findMany = vi.fn().mockImplementation(({ where }) => {
       if (where.status === "PENDING") return Promise.resolve([]);
       if (where.cleanupAfter) return Promise.resolve(candidateRows);
-      if (where.processingToken) return Promise.resolve(leasedData);
+      if (where.cleanupToken) return Promise.resolve(leasedData);
       return Promise.resolve([]);
     });
     const updateMany = vi.fn().mockResolvedValue({ count: 2 });
@@ -320,8 +320,8 @@ describe("observable backlog-aware cleanup (RR-006)", () => {
           id: { in: ["c-1", "c-2"] },
         }),
         data: expect.objectContaining({
-          processingToken: expect.any(String),
-          processingUntil: expect.any(Date),
+          cleanupToken: expect.any(String),
+          cleanupUntil: expect.any(Date),
         }),
       }),
     );
@@ -337,11 +337,14 @@ describe("observable backlog-aware cleanup (RR-006)", () => {
     // Verify cleaned rows have lease cleared
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "c-1" },
+        where: expect.objectContaining({
+          id: "c-1",
+          cleanupToken: expect.any(String),
+        }),
         data: expect.objectContaining({
           cleanedAt: expect.any(Date),
-          processingToken: null,
-          processingUntil: null,
+          cleanupToken: null,
+          cleanupUntil: null,
         }),
       }),
     );
@@ -361,7 +364,7 @@ describe("observable backlog-aware cleanup (RR-006)", () => {
     const findMany = vi.fn().mockImplementation(({ where }) => {
       if (where.status === "PENDING") return Promise.resolve([]);
       if (where.cleanupAfter) return Promise.resolve(candidateRows);
-      if (where.processingToken) return Promise.resolve(leasedData);
+      if (where.cleanupToken) return Promise.resolve(leasedData);
       return Promise.resolve([]);
     });
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
@@ -404,11 +407,14 @@ describe("observable backlog-aware cleanup (RR-006)", () => {
     // Verify backoff advanced cleanupAfter by 300_000ms (5 mins) and cleared lease
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "fail-1" },
+        where: expect.objectContaining({
+          id: "fail-1",
+          cleanupToken: expect.any(String),
+        }),
         data: expect.objectContaining({
-          cleanupAfter: new Date("2026-11-03T12:05:00Z"),
-          processingToken: null,
-          processingUntil: null,
+          cleanupRetryAt: new Date("2026-11-03T12:05:00Z"),
+          cleanupToken: null,
+          cleanupUntil: null,
         }),
       }),
     );
@@ -422,7 +428,7 @@ describe("observable backlog-aware cleanup (RR-006)", () => {
       if (where.status === "PENDING") return Promise.resolve(3);
       if (where.status === "READY") return Promise.resolve(10);
       if (where.status === "FAILED") return Promise.resolve(4);
-      if (where.processingUntil) return Promise.resolve(2);
+      if (where.cleanupUntil) return Promise.resolve(2);
       return Promise.resolve(0);
     });
     const findFirst = vi.fn().mockResolvedValue({ cleanupAfter: oldestDate });

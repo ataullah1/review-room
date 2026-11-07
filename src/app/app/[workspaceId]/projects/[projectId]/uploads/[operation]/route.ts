@@ -62,3 +62,40 @@ export async function POST(
     );
   }
 }
+
+export async function GET(
+  request: Request,
+  context: {
+    params: Promise<{
+      workspaceId: string;
+      projectId: string;
+      operation: string;
+    }>;
+  },
+) {
+  try {
+    const { workspaceId, projectId, operation } = await context.params;
+    if (operation !== "status")
+      return NextResponse.json(
+        { error: "Not found." },
+        { status: 404, headers: uploadHeaders },
+      );
+    const user = await requireUser();
+    const versionId =
+      new URL(request.url).searchParams.get("versionId") || undefined;
+    const result = await uploadService(
+      getDb(),
+      getUploadStorage(),
+      user.id,
+      workspaceId,
+      projectId,
+    ).status(versionId);
+    return NextResponse.json(result, { headers: uploadHeaders });
+  } catch (error) {
+    const failure = uploadFailure(error);
+    return NextResponse.json(
+      { error: failure.error },
+      { status: failure.status, headers: uploadHeaders },
+    );
+  }
+}

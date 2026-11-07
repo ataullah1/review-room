@@ -112,21 +112,27 @@ export async function claimUpload(
   workspaceId: string,
   projectId: string,
   versionId: string,
+  now: Date = new Date(),
 ) {
   await writable(tx, userId, workspaceId, projectId);
   const row = await findUpload(tx, userId, workspaceId, projectId, versionId);
   if (row.status === "READY") return { row, token: null };
-  if (row.status !== "PENDING" || row.expiresAt <= new Date())
+  if (row.status !== "PENDING" || row.expiresAt <= now)
     throw new UploadError(
       "This upload expired or was cancelled. Please upload it again.",
       409,
     );
   const token = randomUUID();
   const claimed = await tx.assetVersion.updateMany({
-    where: { id: row.id, status: "PENDING", processingToken: null },
+    where: {
+      id: row.id,
+      status: "PENDING",
+      expiresAt: { gt: now },
+      OR: [{ processingToken: null }, { processingUntil: { lte: now } }],
+    },
     data: {
       processingToken: token,
-      processingUntil: new Date(Date.now() + 2 * 60_000),
+      processingUntil: new Date(now.getTime() + 2 * 60_000),
     },
   });
   if (!claimed.count)
@@ -135,6 +141,108 @@ export async function claimUpload(
       409,
     );
   return { row, token };
+}
+export type UploadStatus = {
+  versionId: string;
+  assetId: string;
+  title: string;
+  originalName: string;
+  status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+  canRetry: boolean;
+  canCancel: boolean;
+  nextAction: "finalize" | "wait" | "restart" | "complete";
+  failureReason?: string | null;
+  expiresAt: string;
+  createdAt: string;
+};
+export async function getUploadStatus(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  versionId?: string,
+  now: Date = new Date(),
+): Promise<UploadStatus | null> {
+  await requireProjectAccess(tx, userId, workspaceId, projectId);
+  let row;
+  if (versionId) {
+    if (!z.uuid().safeParse(versionId).success)
+      throw new UploadError("Upload not found.", 404);
+    row = await tx.assetVersion.findFirst({
+      where: { id: versionId, workspaceId, projectId, creatorId: userId },
+      include: { asset: { select: { title: true } } },
+    });
+    if (!row) throw new UploadError("Upload not found.", 404);
+  } else {
+    const recentThreshold = new Date(now.getTime() - 15 * 60_000);
+    row = await tx.assetVersion.findFirst({
+      where: {
+        workspaceId,
+        projectId,
+        creatorId: userId,
+        createdAt: { gte: recentThreshold },
+      },
+      orderBy: { createdAt: "desc" },
+      include: { asset: { select: { title: true } } },
+    });
+    if (!row) return null;
+  }
+  const base = {
+    versionId: row.id,
+    assetId: row.assetId,
+    title: row.asset?.title || row.originalName,
+    originalName: row.originalName,
+    expiresAt: row.expiresAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+  };
+  if (row.status === "READY") {
+    return {
+      ...base,
+      status: "READY",
+      canRetry: false,
+      canCancel: false,
+      nextAction: "complete",
+    };
+  }
+  if (row.status === "FAILED") {
+    return {
+      ...base,
+      status: "FAILED",
+      canRetry: false,
+      canCancel: false,
+      nextAction: "restart",
+      failureReason: row.failureReason || "Upload could not be completed.",
+    };
+  }
+  if (row.expiresAt <= now) {
+    return {
+      ...base,
+      status: "FAILED",
+      canRetry: false,
+      canCancel: false,
+      nextAction: "restart",
+      failureReason: "Upload expired before completion.",
+    };
+  }
+  const isLeased = Boolean(
+    row.processingToken && row.processingUntil && row.processingUntil > now,
+  );
+  if (isLeased) {
+    return {
+      ...base,
+      status: "PROCESSING",
+      canRetry: false,
+      canCancel: false,
+      nextAction: "wait",
+    };
+  }
+  return {
+    ...base,
+    status: "PENDING",
+    canRetry: true,
+    canCancel: true,
+    nextAction: "finalize",
+  };
 }
 export async function publishUpload(
   tx: UserDatabase,

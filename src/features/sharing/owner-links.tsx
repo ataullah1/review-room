@@ -3,6 +3,7 @@ import { useCallback, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 type Row = {
   id: string;
+  delivery?: string;
   email?: string;
   role?: string;
   expiresAt: string;
@@ -66,6 +67,12 @@ export function OwnerLinks({
         data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setLink(`${window.location.origin}/${kind}#${data.token}`);
+      if (kind === "invite")
+        setNotice(
+          data.delivery === "queued"
+            ? "Invitation saved and queued for email. You can also copy the link below."
+            : "Email was not queued. Copy and send this link yourself.",
+        );
       await load();
     } catch (error) {
       setError(
@@ -91,6 +98,12 @@ export function OwnerLinks({
         data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setLink(`${window.location.origin}/${kind}#${data.token}`);
+      if (kind === "invite")
+        setNotice(
+          data.delivery === "queued"
+            ? "Invitation saved and queued for email. You can also copy the link below."
+            : "Email was not queued. Copy and send this link yourself.",
+        );
       await load();
     } catch (error) {
       setError(
@@ -225,6 +238,7 @@ export function OwnerLinks({
           <li key={row.id}>
             <div>
               <strong>{row.email || "Read-only version link"}</strong>
+              {row.delivery && <span>Email: {row.delivery}</span>}
               <span>
                 {row.role ? `${row.role.toLowerCase()} · ` : ""}
                 {row.revokedAt
@@ -244,7 +258,7 @@ export function OwnerLinks({
                   onClick={() => replace(row.id)}
                   title="Revoke the old link and generate a fresh invitation"
                 >
-                  Replace & Resend
+                  Replace invitation
                 </button>
               )}
               {!row.revokedAt && !disabled && (

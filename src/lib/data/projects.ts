@@ -8,6 +8,7 @@ import {
 import type { UserDatabase } from "./context";
 import {
   createProjectSchema,
+  projectDetailsSchema,
   projectMembersSchema,
   projectPageSize,
   type ProjectFilters,
@@ -22,6 +23,11 @@ export async function projectDirectory(
   const member = await requireWorkspaceMember(tx, userId, workspaceId);
   const where = {
     workspaceId,
+    ...(filters.status === "completed"
+      ? { completionId: { not: null } }
+      : filters.status === "active"
+        ? { completionId: null }
+        : {}),
     archivedAt: filters.status === "archived" ? { not: null } : null,
     ...(filters.q
       ? { name: { contains: filters.q, mode: "insensitive" as const } }
@@ -203,4 +209,28 @@ export async function setProjectArchived(
     },
     data: { archivedAt: archived ? new Date() : null },
   });
+}
+
+export async function updateProjectDetails(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  input: unknown,
+) {
+  await lockProject(tx, projectId);
+  const { project } = await requireProjectRole(
+    tx,
+    userId,
+    workspaceId,
+    projectId,
+    ["OWNER"],
+  );
+  if (project.archivedAt)
+    throw new AccessError(
+      "Restore this project before editing its details.",
+      409,
+    );
+  const data = projectDetailsSchema.parse(input);
+  return tx.project.update({ where: { id: projectId }, data });
 }

@@ -29,6 +29,7 @@ model UserProfile {
   activityReads       ProjectActivityRead[]
   reviewerDemoAccount ReviewerDemoAccount?
   ownedWorkspace      Workspace?            @relation("WorkspaceCreator")
+  requiredReviews     ReviewRoundReviewer[]
 
   @@schema("app")
 }
@@ -61,17 +62,24 @@ model Membership {
 }
 
 model Project {
-  id            String                @id @default(uuid()) @db.Uuid
-  workspaceId   String                @db.Uuid
-  name          String                @db.VarChar(150)
-  createdAt     DateTime              @default(now()) @db.Timestamptz(3)
-  archivedAt    DateTime?             @db.Timestamptz(3)
-  workspace     Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  members       ProjectMember[]
-  assets        Asset[]
-  invitations   ProjectInvitation[]
-  activity      ActivityEvent[]
-  activityReads ProjectActivityRead[]
+  id               String                @id @default(uuid()) @db.Uuid
+  workspaceId      String                @db.Uuid
+  name             String                @db.VarChar(150)
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  completionId     String?               @unique @db.Uuid
+  description      String?               @db.VarChar(2000)
+  dueDate          DateTime?             @db.Date
+  archivedAt       DateTime?             @db.Timestamptz(3)
+  workspace        Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members          ProjectMember[]
+  assets           Asset[]
+  invitations      ProjectInvitation[]
+  activity         ActivityEvent[]
+  activityReads    ProjectActivityRead[]
+  reviewRounds     ReviewRound[]
+  completions      ProjectCompletion[]   @relation("CompletionHistory")
+  activeCompletion ProjectCompletion?    @relation("ActiveCompletion", fields: [completionId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reopenings       ProjectReopening[]
 
   @@unique([id, workspaceId])
   @@index([workspaceId, archivedAt, createdAt, id])
@@ -127,6 +135,7 @@ model Asset {
   project          Project        @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   versions         AssetVersion[] @relation("AssetVersions")
   currentVersion   AssetVersion?  @relation("CurrentVersion", fields: [currentVersionId, id], references: [id, assetId], onDelete: NoAction, onUpdate: NoAction)
+  reviewRounds     ReviewRound[]
 
   @@unique([id, projectId, workspaceId])
   @@unique([currentVersionId, id])
@@ -156,6 +165,9 @@ model AssetVersion {
   createdAt        DateTime           @default(now()) @db.Timestamptz(3)
   expiresAt        DateTime           @db.Timestamptz(3)
   cleanupAfter     DateTime           @db.Timestamptz(3)
+  cleanupToken     String?            @db.Uuid
+  cleanupUntil     DateTime?          @db.Timestamptz(3)
+  cleanupRetryAt   DateTime?          @db.Timestamptz(3)
   cleanedAt        DateTime?          @db.Timestamptz(3)
   processingToken  String?            @db.Uuid
   processingUntil  DateTime?          @db.Timestamptz(3)
@@ -166,6 +178,7 @@ model AssetVersion {
   reviewDecisions  ReviewDecision[]
   shares           ShareLink[]
   creator          UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  reviewRounds     ReviewRound[]
 
   @@unique([id, assetId])
   @@unique([assetId, versionNumber])
@@ -344,6 +357,115 @@ model ReviewerDemoQuota {
   day       DateTime @db.Timestamptz(3)
   mutations Int      @default(0)
   uploads   Int      @default(0)
+
+  @@schema("app")
+}
+
+// Server-recorded mailbox proof; no request/browser grants.
+model EmailVerificationProof {
+  userId     String   @id @db.Uuid
+  emailHash  String   @db.Char(64)
+  verifiedAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt  DateTime @db.Timestamptz(3)
+
+  @@schema("app")
+}
+
+model RecoveryGrant {
+  tokenHash String   @id @db.Char(64)
+  userId    String   @db.Uuid
+  sessionId String
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@schema("app")
+}
+
+model ReviewRound {
+  id              String                @id @db.Uuid
+  workspaceId     String                @db.Uuid
+  projectId       String                @db.Uuid
+  assetId         String                @db.Uuid
+  versionId       String                @db.Uuid
+  requestedById   String                @db.Uuid
+  requestedByName String                @db.VarChar(100)
+  reason          String                @db.VarChar(500)
+  createdAt       DateTime              @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(3)
+  asset           Asset                 @relation(fields: [assetId, projectId, workspaceId], references: [id, projectId, workspaceId], onDelete: Cascade, onUpdate: NoAction)
+  version         AssetVersion          @relation(fields: [versionId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  project         Project               @relation(fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Cascade, onUpdate: NoAction)
+  reviewers       ReviewRoundReviewer[]
+
+  @@index([versionId, createdAt])
+  @@schema("app")
+}
+
+model ReviewRoundReviewer {
+  roundId      String      @db.Uuid
+  userId       String      @db.Uuid
+  reviewerName String      @db.VarChar(100)
+  round        ReviewRound @relation(fields: [roundId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user         UserProfile @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([roundId, userId])
+  @@schema("app")
+}
+
+model ProjectCompletion {
+  id              String            @id @db.Uuid
+  workspaceId     String            @db.Uuid
+  projectId       String            @db.Uuid
+  completedById   String            @db.Uuid
+  completedByName String            @db.VarChar(100)
+  createdAt       DateTime          @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(3)
+  manifest        Json
+  project         Project           @relation("CompletionHistory", fields: [projectId, workspaceId], references: [id, workspaceId], onDelete: Restrict, onUpdate: NoAction)
+  currentProject  Project?          @relation("ActiveCompletion")
+  reopening       ProjectReopening?
+
+  @@schema("app")
+}
+
+model ProjectReopening {
+  id           String            @id @db.Uuid
+  completionId String            @unique @db.Uuid
+  projectId    String            @db.Uuid
+  actorId      String            @db.Uuid
+  actorName    String            @db.VarChar(100)
+  reason       String            @db.VarChar(500)
+  createdAt    DateTime          @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(3)
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  completion   ProjectCompletion @relation(fields: [completionId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@schema("app")
+}
+
+model NotificationJob {
+  id            String    @id @db.Uuid
+  dedupeKey     String    @unique
+  workspaceId   String    @db.Uuid
+  projectId     String    @db.Uuid
+  kind          String    @db.VarChar(20)
+  recipientId   String?   @db.Uuid
+  sourceId      String    @db.Uuid
+  payload       String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt     DateTime  @db.Timestamptz(3)
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @db.Timestamptz(3)
+  leaseToken    String?   @db.Uuid
+  leaseUntil    DateTime? @db.Timestamptz(3)
+  sentAt        DateTime? @db.Timestamptz(3)
+  cancelledAt   DateTime? @db.Timestamptz(3)
+  lastCode      String?   @db.VarChar(40)
+
+  @@index([nextAttemptAt])
+  @@schema("app")
+}
+
+model NotificationPreference {
+  userId       String  @id @db.Uuid
+  emailEnabled Boolean @default(true)
 
   @@schema("app")
 }

@@ -70,7 +70,7 @@ export function AuthForm({
       const response = await fetch("/auth/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: pendingEmail }),
+        body: JSON.stringify({ email: pendingEmail, next }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -375,6 +375,14 @@ export function SessionButton({
         setError(data.error || "Please try again.");
         setPending(false);
         return;
+      }
+      if (operation === "logout") {
+        try {
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i);
+            if (key?.startsWith("review-room:")) sessionStorage.removeItem(key);
+          }
+        } catch {}
       }
       window.location.assign(data.redirectTo);
     } catch {

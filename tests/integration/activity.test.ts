@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../src/generated/prisma/client";
@@ -113,6 +113,7 @@ beforeAll(async () => {
   });
 });
 afterAll(async () => {
+  await db.emailVerificationProof.deleteMany({ where: { userId: recipient } });
   await db.project.deleteMany({
     where: { id: { in: [projectId, secondProject] } },
   });
@@ -282,6 +283,17 @@ describe("transactional project activity and persistent unread state", () => {
     });
   });
   it("records invite acceptance atomically and does not copy its email/token or duplicate retries", async () => {
+    await db.emailVerificationProof.upsert({
+      where: { userId: recipient },
+      create: {
+        userId: recipient,
+        emailHash: createHash("sha256")
+          .update("invite-activity@example.test")
+          .digest("hex"),
+        expiresAt: new Date(Date.now() + 86400_000),
+      },
+      update: { expiresAt: new Date(Date.now() + 86400_000) },
+    });
     const invite = await scope(ids.owner, (tx) =>
       createInvitation(tx, ids.owner, ids.workspace, projectId, {
         email: "invite-activity@example.test",

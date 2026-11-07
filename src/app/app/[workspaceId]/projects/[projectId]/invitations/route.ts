@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { dispatchMail } from "@/features/notifications/dispatch";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/user";
 import { requireSameOrigin } from "@/lib/auth/validation";
@@ -55,6 +56,7 @@ export async function POST(request: Request, context: Context) {
           ? replaceInvitation(tx, user.id, workspaceId, projectId, data.id)
           : revokeInvitation(tx, user.id, workspaceId, projectId, data.id),
     );
+    after(() => dispatchMail(getDb(), undefined, 2).catch(() => undefined));
     return NextResponse.json(result, { headers: capabilityHeaders });
   } catch (e) {
     return capabilityFailure(e);

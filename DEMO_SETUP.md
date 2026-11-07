@@ -34,9 +34,9 @@ pnpm demo:seed-existing --check
 REVIEWER_DEMO_EXISTING_CONFIRM=pwzwrknnzkdagfcjnqkr pnpm demo:seed-existing
 ```
 
-The command checks backend identity, accounts/passwords, empty compatibility workspaces, Auth schema, migration history, private bucket and artwork. It saves a demo-only audit snapshot under ignored `.local/`, applies the protection migration if missing, verifies immutable Storage object hashes and installs missing records transactionally. Existing feedback, approvals, versions and current selections are preserved during normal re-runs and baseline expansion. Conflicts fail instead of overwriting data. It never commits, deploys or changes Dashboard settings.
+The command checks backend identity, accounts/passwords, empty compatibility workspaces, Auth schema, migration history, private bucket and artwork. It saves a demo-only audit snapshot under ignored `.local/`, requires reviewed migrations to be applied separately, verifies immutable Storage object hashes and installs missing records transactionally. Existing feedback, approvals, versions and current selections are preserved during normal re-runs and baseline expansion. Conflicts fail instead of overwriting data. It never commits, deploys or changes Dashboard settings.
 
-Supabase must already use the app's normal Auth setup: Authentication → Hooks → Before User Created → `app.before_user_created`; Authentication → URL Configuration must use the deployed Site URL and `/auth/callback`. If immediate ordinary signup is offered, Authentication → Sign In / Providers → Email → Confirm email must be OFF. These settings are manual; seeding does not change them.
+Supabase must already use the app's normal Auth setup: Authentication → Hooks → Before User Created → `app.before_user_created`; Authentication → URL Configuration must use the deployed Site URL and `/auth/callback`. For the current verification-aware deployment, use Authentication → Sign In / Providers → Email → Confirm email ON and configure Auth SMTP. The manually confirmed public demo accounts retain their existing login. These settings are manual; seeding does not change them.
 
 ## Permissions and limits
 
@@ -67,3 +67,7 @@ For public password rotation, an operator temporarily enables `allowAuthChanges`
 Local integration tests use only the dedicated loopback PostgreSQL test database. They cover incremental/idempotent seeds, original role preservation, empty-workspace compatibility, direct RLS denial, real review actions, durable quotas, Auth/MFA guards and scoped restore. These fixtures do not constitute hosted Auth acceptance.
 
 Source changes must be published by the owner. Until the new redirect is deployed, open the existing live login with `?next=/app/` to reach the workspace chooser. This repository never deploys automatically.
+
+## Compatibility with current upgrades
+
+Apply the reviewed migrations before publishing the upgraded application. Public demo isolation and credential guards remain. Demo users can explore real review actions, but project completion/reopening is intentionally disabled for the shared public workspace to avoid freezing it for later reviewers. Email dispatch skips registered demo workspaces and the intentional demo addresses. No new demo users are created by the upgrade. See the current release section in `docs/RELEASE.md`; original dedicated owner seed restrictions still apply.

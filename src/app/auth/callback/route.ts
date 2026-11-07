@@ -1,3 +1,12 @@
+import { createHash, randomBytes } from "node:crypto";
+import { recordEmailProof } from "@/lib/auth/email-proof";
+import {
+  recoveryStartCookie,
+  recoveryGrantCookie,
+  readAuthIntent,
+  signAuthIntent,
+  intentCookieOptions,
+} from "@/lib/auth/intent";
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { createAuthClient } from "@/lib/auth/supabase";
@@ -59,6 +68,16 @@ export async function GET(request: NextRequest) {
           async verifiedUser() {
             const client = await createAuthClient(true);
             const { data, error } = await client.auth.getUser();
+            if (
+              !error &&
+              data.user?.email &&
+              data.user.identities?.some(
+                (i) =>
+                  i.provider === "google" &&
+                  i.identity_data?.email_verified === true,
+              )
+            )
+              await recordEmailProof(data.user.id, data.user.email);
             return !error &&
               data.user?.identities?.some(
                 (identity) => identity.provider === "google",
@@ -67,7 +86,13 @@ export async function GET(request: NextRequest) {
               : null;
           },
           bootstrap: (user) =>
-            bootstrapWithQuota(getDb(), user, request.headers, true),
+            bootstrapWithQuota(
+              getDb(),
+              user,
+              request.headers,
+              true,
+              nextCookie === "/invite/accept",
+            ),
         },
       );
     } catch {
@@ -76,70 +101,77 @@ export async function GET(request: NextRequest) {
       await discardSignupPermit(getDb(), token).catch(() => undefined);
     }
   } else {
-    // Email verification or password recovery flow (PKCE code or OTP token_hash)
     const code = request.nextUrl.searchParams.get("code");
     const tokenHash = request.nextUrl.searchParams.get("token_hash");
     const type = request.nextUrl.searchParams.get("type");
-    const isRecovery = type === "recovery";
-    const failurePath = isRecovery
-      ? "/login?error=recovery"
-      : "/login?error=verification";
-    const hasError = request.nextUrl.searchParams.has("error");
-
-    if (hasError) {
-      path = failurePath;
-    } else if (code) {
-      try {
-        const client = await createAuthClient(true);
-        const { error: exchangeError } =
-          await client.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          path = failurePath;
-        } else {
-          const { data, error: userError } = await client.auth.getUser();
-          if (!userError && data.user) {
-            if (isRecovery) {
-              path = "/reset-password";
-            } else {
-              const user = identityFromUser(data.user);
-              await bootstrapWithQuota(getDb(), user, request.headers, false);
-              path = "/app";
-            }
-          } else {
-            path = failurePath;
-          }
-        }
-      } catch {
-        path = failurePath;
-      }
-    } else if (tokenHash && type) {
-      try {
-        const client = await createAuthClient(true);
-        const { error: otpError } = await client.auth.verifyOtp({
+    const recovery = type === "recovery";
+    path = recovery ? "/login?error=recovery" : "/login?error=verification";
+    try {
+      const client = await createAuthClient(true);
+      if (request.nextUrl.searchParams.has("error"))
+        throw new Error("Provider declined callback");
+      if (code) {
+        const { error } = await client.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+      } else if (
+        tokenHash &&
+        ["signup", "magiclink", "email", "recovery"].includes(type || "")
+      ) {
+        const { error } = await client.auth.verifyOtp({
           token_hash: tokenHash,
           type: type as EmailOtpType,
         });
-        if (otpError) {
-          path = failurePath;
-        } else {
-          const { data, error: userError } = await client.auth.getUser();
-          if (!userError && data.user) {
-            if (isRecovery) {
-              path = "/reset-password";
-            } else {
-              const user = identityFromUser(data.user);
-              await bootstrapWithQuota(getDb(), user, request.headers, false);
-              path = "/app";
-            }
-          } else {
-            path = failurePath;
-          }
-        }
-      } catch {
-        path = failurePath;
+        if (error) throw error;
+      } else throw new Error("Missing callback proof");
+      const { data, error } = await client.auth.getUser();
+      if (error || !data.user?.email || !data.user.email_confirmed_at)
+        throw new Error("Unverified identity");
+      const user = identityFromUser(data.user);
+      // A successfully exchanged provider code/token is proof; password login
+      // and legacy auto-confirm timestamps alone never reach this path.
+      await recordEmailProof(user.id, data.user.email);
+      if (recovery) {
+        const intent = readAuthIntent(
+          jar.get(recoveryStartCookie)?.value,
+          "recovery-start",
+        );
+        if (code && intent?.email !== data.user.email)
+          throw new Error("Recovery intent mismatch");
+        const { data: claims } = await client.auth.getClaims();
+        const sessionId = claims?.claims.session_id;
+        if (typeof sessionId !== "string")
+          throw new Error("No verified session");
+        const nonce = randomBytes(32).toString("hex");
+        await getDb()
+          .$executeRaw`INSERT INTO app."RecoveryGrant"("tokenHash","userId","sessionId","expiresAt") VALUES(${createHash("sha256").update(nonce).digest("hex")},${user.id}::uuid,${sessionId},NOW()+INTERVAL '10 minutes')`;
+        jar.set(
+          recoveryGrantCookie,
+          signAuthIntent({
+            kind: "recovery-grant",
+            email: data.user.email,
+            userId: user.id,
+            sessionId,
+            nonce,
+            expires: Date.now() + 600_000,
+          }),
+          intentCookieOptions,
+        );
+        jar.set(recoveryStartCookie, "", { ...intentCookieOptions, maxAge: 0 });
+        path = "/reset-password";
+      } else {
+        await bootstrapWithQuota(
+          getDb(),
+          user,
+          request.headers,
+          false,
+          safeReturnPath(
+            request.nextUrl.searchParams.get("next") || nextCookie,
+          ) === "/invite/accept",
+        );
+        path = "/app";
       }
-    } else {
-      path = failurePath;
+    } catch {
+      /* Return only a fixed error route, never provider tokens/errors. */
     }
   }
 

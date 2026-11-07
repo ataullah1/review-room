@@ -1,8 +1,7 @@
 import { config } from "dotenv";
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir, writeFile, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { Client } from "pg";
 import { createClient } from "@supabase/supabase-js";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -132,12 +131,19 @@ async function main() {
     const { rows: applied } = await sql.query<{ migration_name: string }>(
       `SELECT migration_name FROM app._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`,
     );
+    const knownMigrations = (
+      await readdir("prisma/migrations", { withFileTypes: true })
+    )
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    const appliedNames = applied.map((row) => row.migration_name).sort();
     if (
-      applied.length !==
-      (applied.some((m) => m.migration_name === migration) ? 14 : 13)
+      appliedNames.length !== knownMigrations.length ||
+      appliedNames.some((name, index) => name !== knownMigrations[index])
     )
       throw new Error(
-        "Unexpected migration history. Review it before installing the demo.",
+        "Apply reviewed pending migrations with the operator release procedure before demo seeding. This demo command will not migrate the live backend.",
       );
     const bucket = process.env.SUPABASE_STORAGE_BUCKET;
     if (bucket !== "review-room-private")
@@ -188,29 +194,6 @@ async function main() {
       JSON.stringify({ users, memberships }, null, 2),
       { mode: 0o600 },
     );
-    if (!applied.some((m) => m.migration_name === migration)) {
-      const direct = new URL(process.env.DIRECT_URL);
-      direct.searchParams.set("sslmode", "verify-full");
-      // Prisma CLI reads the CA from a file, whereas the runtime accepts PEM text.
-      await writeFile(".local/reviewer-demo-db-ca.crt", ca, { mode: 0o600 });
-      direct.searchParams.set(
-        "sslrootcert",
-        resolve(".local/reviewer-demo-db-ca.crt"),
-      );
-      const result = spawnSync(
-        "node_modules/.bin/prisma",
-        ["migrate", "deploy"],
-        {
-          env: { ...process.env, DIRECT_URL: direct.toString() },
-          encoding: "utf8",
-        },
-      );
-      if (result.status !== 0)
-        throw new Error(
-          "Reviewer demo migration failed. Inspect migration status privately; no seed records were written.",
-        );
-      console.log("Applied the reviewer demo protection migration.");
-    }
     db = new PrismaClient({
       adapter: new PrismaPg(options, { schema: "app" }),
     });

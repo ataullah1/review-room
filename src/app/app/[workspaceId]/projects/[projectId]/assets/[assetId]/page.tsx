@@ -1,3 +1,5 @@
+import { ReviewRoundPanel } from "@/features/reviews/review-round-panel";
+import { reviewRoundStatus, reviewCandidates } from "@/lib/data/review-rounds";
 import Link from "next/link";
 import { OwnerLinks } from "@/features/sharing/owner-links";
 import { versionPage, decisionPage } from "@/lib/data/reviews";
@@ -36,6 +38,11 @@ export default async function ReviewPage({
       return {
         ...data,
         userId: user.id,
+        round: await reviewRoundStatus(tx, data.version.id),
+        candidates:
+          data.member.role !== "CLIENT"
+            ? await reviewCandidates(tx, projectId)
+            : [],
         versions: await versionPage(
           tx,
           user.id,
@@ -154,6 +161,7 @@ export default async function ReviewPage({
       ) : (
         <ReviewWorkspace
           key={version.id}
+          draftScope={`${userId}:${workspaceId}:${projectId}:${assetId}`}
           base={base}
           versionId={version.id}
           imageUrl={`${base}/file?versionId=${version.id}&preview=1`}
@@ -163,7 +171,9 @@ export default async function ReviewPage({
           initial={initial}
           canResolve={member.role !== "CLIENT"}
           readOnly={
-            !!project.archivedAt || asset.currentVersionId !== version.id
+            !!project.archivedAt ||
+            !!project.completionId ||
+            asset.currentVersionId !== version.id
           }
         />
       )}
@@ -173,29 +183,44 @@ export default async function ReviewPage({
           kind="share"
           endpoint={`${base}/shares`}
           versionId={version.id}
-          disabled={!!project.archivedAt}
+          disabled={!!project.archivedAt || !!project.completionId}
         />
       )}
+      <ReviewRoundPanel
+        base={base}
+        versionId={version.id}
+        status={result.round}
+        candidates={result.candidates}
+        canRequest={
+          member.role !== "CLIENT" &&
+          !project.archivedAt &&
+          !project.completionId &&
+          !project.completionId &&
+          asset.currentVersionId === version.id
+        }
+      />
       <DecisionPanel
         key={`${version.id}:${asset.currentVersionId}:${decisions.history[0]?.id || "none"}`}
         base={base}
         versionId={version.id}
         currentId={asset.currentVersionId!}
         userId={userId}
-        canDecide={member.role === "CLIENT"}
+        canDecide={member.role === "CLIENT" && !project.completionId}
         archived={!!project.archivedAt}
         initial={decisions}
       />
-      {member.role !== "CLIENT" && !project.archivedAt && (
-        <details className="new-version-panel">
-          <summary>Upload a new version</summary>
-          <UploadPanel
-            workspaceId={workspaceId}
-            projectId={projectId}
-            assetId={assetId}
-          />
-        </details>
-      )}
+      {member.role !== "CLIENT" &&
+        !project.archivedAt &&
+        !project.completionId && (
+          <details className="new-version-panel">
+            <summary>Upload a new version</summary>
+            <UploadPanel
+              workspaceId={workspaceId}
+              projectId={projectId}
+              assetId={assetId}
+            />
+          </details>
+        )}
     </section>
   );
 }

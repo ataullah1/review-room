@@ -1,3 +1,4 @@
+import { CompletionControls } from "@/features/projects/completion-controls";
 import Link from "next/link";
 import { ActivityPanel } from "@/features/activity/activity-panel";
 import { OwnerLinks } from "@/features/sharing/owner-links";
@@ -10,6 +11,7 @@ import { AccessError } from "@/lib/auth/errors";
 import { getProject } from "@/lib/server/workspaces";
 import {
   ProjectPeopleForm,
+  ProjectDetailsForm,
   ArchiveProjectForm,
 } from "@/features/projects/project-forms";
 export default async function ProjectPage({
@@ -55,6 +57,40 @@ export default async function ProjectPage({
           {project.archivedAt ? "Archived" : "Active"}
         </span>
       </div>
+      {project.description && (
+        <p style={{ whiteSpace: "pre-wrap" }}>{project.description}</p>
+      )}
+      {project.dueDate && (
+        <p>
+          Due{" "}
+          <time dateTime={project.dueDate.toISOString().slice(0, 10)}>
+            {project.dueDate.toISOString().slice(0, 10)}
+          </time>
+        </p>
+      )}
+      {!project.archivedAt && !project.completionId && (
+        <nav className="project-notice" aria-label="Project next steps">
+          <strong>Next steps</strong>
+          <p>
+            {member.role === "CLIENT"
+              ? "Open a design, pin your feedback, then record your decision on the current version."
+              : assetDirectory.total
+                ? "Invite your client below, then open a design to review feedback or upload a revision."
+                : "Upload your first design, then invite a client to review it."}
+          </p>
+        </nav>
+      )}
+      {member.role === "OWNER" &&
+        !project.archivedAt &&
+        !project.completionId && (
+          <ProjectDetailsForm
+            workspaceId={workspaceId}
+            projectId={projectId}
+            name={project.name}
+            description={project.description}
+            dueDate={project.dueDate?.toISOString().slice(0, 10) || ""}
+          />
+        )}
       {project.archivedAt && (
         <p className="project-notice">
           This project is archived. Its history and people are preserved.
@@ -64,6 +100,7 @@ export default async function ProjectPage({
         </p>
       )}
       {!project.archivedAt &&
+        !project.completionId &&
         (member.role === "OWNER" || member.role === "DESIGNER") && (
           <UploadPanel workspaceId={workspaceId} projectId={projectId} />
         )}
@@ -138,6 +175,12 @@ export default async function ProjectPage({
           )}
         </nav>
       )}
+      <CompletionControls
+        base={`/app/${workspaceId}/projects/${projectId}`}
+        completed={!!project.completionId}
+        owner={member.role === "OWNER"}
+        archived={!!project.archivedAt}
+      />
       <ActivityPanel
         key={projectId}
         workspaceId={workspaceId}
@@ -145,7 +188,7 @@ export default async function ProjectPage({
       />
       {member.role === "OWNER" && (
         <>
-          {!project.archivedAt && (
+          {!project.archivedAt && !project.completionId && (
             <ProjectPeopleForm
               workspaceId={workspaceId}
               projectId={projectId}
@@ -156,7 +199,7 @@ export default async function ProjectPage({
           <OwnerLinks
             kind="invite"
             endpoint={`/app/${workspaceId}/projects/${projectId}/invitations`}
-            disabled={!!project.archivedAt}
+            disabled={!!project.archivedAt || !!project.completionId}
           />
           <ArchiveProjectForm
             key={String(!!project.archivedAt)}

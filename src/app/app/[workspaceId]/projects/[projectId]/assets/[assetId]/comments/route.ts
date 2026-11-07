@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { dispatchMail } from "@/features/notifications/dispatch";
+import { after, NextResponse } from "next/server";
 import { ZodError, z } from "zod";
 import { requireUser } from "@/lib/auth/user";
 import { requireSameOrigin } from "@/lib/auth/validation";
@@ -141,6 +142,7 @@ export async function POST(request: Request, context: Context) {
             input.resolved,
           ),
     );
+    after(() => dispatchMail(getDb(), undefined, 2).catch(() => undefined));
     return NextResponse.json({ comment }, { headers });
   } catch (error) {
     return failure(error, "read");

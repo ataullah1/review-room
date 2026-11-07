@@ -107,11 +107,16 @@ export async function cleanupUploads(
         where: {
           cleanupAfter: { lte: effectiveNow },
           cleanedAt: null,
-          status: { in: ["READY", "FAILED"] },
-          OR: [
-            { processingUntil: null },
-            { processingUntil: { lt: effectiveNow } },
+          AND: [
+            {
+              OR: [
+                { cleanupRetryAt: null },
+                { cleanupRetryAt: { lte: effectiveNow } },
+              ],
+            },
           ],
+          status: { in: ["READY", "FAILED"] },
+          OR: [{ cleanupUntil: null }, { cleanupUntil: { lt: effectiveNow } }],
         },
         orderBy: { cleanupAfter: "asc" },
         take: limit,
@@ -127,20 +132,17 @@ export async function cleanupUploads(
           id: { in: candidateIds },
           cleanedAt: null,
           status: { in: ["READY", "FAILED"] },
-          OR: [
-            { processingUntil: null },
-            { processingUntil: { lt: effectiveNow } },
-          ],
+          OR: [{ cleanupUntil: null }, { cleanupUntil: { lt: effectiveNow } }],
         },
         data: {
-          processingToken: workerToken,
-          processingUntil: leaseUntil,
+          cleanupToken: workerToken,
+          cleanupUntil: leaseUntil,
         },
       });
 
       return tx.assetVersion.findMany({
         where: {
-          processingToken: workerToken,
+          cleanupToken: workerToken,
           cleanedAt: null,
         },
         orderBy: { cleanupAfter: "asc" },
@@ -160,11 +162,12 @@ export async function cleanupUploads(
         );
         await system((tx) =>
           tx.assetVersion.update({
-            where: { id: row.id },
+            where: { id: row.id, cleanupToken: workerToken },
             data: {
               cleanedAt: effectiveNow,
-              processingToken: null,
-              processingUntil: null,
+              cleanupRetryAt: null,
+              cleanupToken: null,
+              cleanupUntil: null,
             },
           }),
         );
@@ -174,11 +177,11 @@ export async function cleanupUploads(
         // Apply retry backoff and release the lease so other queued rows can be processed
         await system((tx) =>
           tx.assetVersion.update({
-            where: { id: row.id },
+            where: { id: row.id, cleanupToken: workerToken },
             data: {
-              cleanupAfter: new Date(effectiveNow.getTime() + backoffMs),
-              processingToken: null,
-              processingUntil: null,
+              cleanupRetryAt: new Date(effectiveNow.getTime() + backoffMs),
+              cleanupToken: null,
+              cleanupUntil: null,
             },
           }),
         ).catch(() => undefined);
@@ -236,7 +239,7 @@ export async function cleanupUploads(
           where: {
             cleanedAt: null,
             status: { in: ["READY", "FAILED"] },
-            processingUntil: { gt: metricsNow },
+            cleanupUntil: { gt: metricsNow },
           },
         }),
       ]);

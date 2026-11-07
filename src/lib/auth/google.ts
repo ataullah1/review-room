@@ -51,7 +51,7 @@ export async function finishGoogle(
     >;
     bootstrap(
       user: import("../data/bootstrap").VerifiedIdentity,
-    ): Promise<{ id: string }>;
+    ): Promise<{ id: string } | null>;
   },
 ) {
   if (

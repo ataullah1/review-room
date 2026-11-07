@@ -5,7 +5,7 @@ export interface UploadStorage {
   read(key: string): Promise<Buffer>;
   put(key: string, bytes: Buffer, mimeType: string): Promise<void>;
   remove(keys: string[]): Promise<void>;
-  signRead(key: string): Promise<string>;
+  signRead(key: string, downloadName?: string): Promise<string>;
 }
 export function storageClient(config: {
   NEXT_PUBLIC_SUPABASE_URL: string;
@@ -31,8 +31,18 @@ export function storageClient(config: {
     },
   );
   const bucket = client.storage.from(config.SUPABASE_STORAGE_BUCKET);
-  const signRead = async (key: string) => {
-    const { data, error } = await bucket.createSignedUrl(key, 60);
+  const signRead = async (key: string, downloadName?: string) => {
+    const { data, error } = await bucket.createSignedUrl(
+      key,
+      60,
+      downloadName
+        ? {
+            download:
+              downloadName.replace(/[\x00-\x1f\x7f/\\]/g, "_").slice(0, 180) ||
+              "approved-design",
+          }
+        : undefined,
+    );
     if (error || !data?.signedUrl)
       throw new UploadError(
         "Could not open this image. Please try again.",
