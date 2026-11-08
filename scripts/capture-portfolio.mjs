@@ -27,7 +27,9 @@ if (
     "Use a loopback HTTP origin, for example http://localhost:3001.",
   );
 
-const output = "docs/screenshots";
+const marketplace = process.argv.includes("--marketplace");
+const output = marketplace ? ".local/release/media" : "docs/screenshots";
+const extension = marketplace ? "png" : "webp";
 const folder = await mkdtemp(join(tmpdir(), "review-room-portfolio-"));
 const profile = join(folder, "chrome");
 let chrome;
@@ -102,9 +104,15 @@ async function capture(name) {
   if (await evaluate("document.documentElement.scrollWidth > innerWidth"))
     throw new Error(`Horizontal overflow in ${name}`);
   const shot = await command("Page.captureScreenshot", { format: "png" });
-  await sharp(Buffer.from(shot.data, "base64"))
-    .webp({ quality: 88 })
-    .toFile(join(output, `${name}.webp`));
+  if (marketplace)
+    await writeFile(
+      join(output, `${name}.png`),
+      Buffer.from(shot.data, "base64"),
+    );
+  else
+    await sharp(Buffer.from(shot.data, "base64"))
+      .webp({ quality: 88 })
+      .toFile(join(output, `${name}.webp`));
   console.log(`Captured ${name}`);
 }
 
@@ -186,7 +194,8 @@ async function intercept({ requestId, request }) {
 }
 
 try {
-  await access(output + "/README.md");
+  if (!marketplace) await access(output + "/README.md");
+  else await mkdir(output, { recursive: true });
   await mkdir(profile);
   chrome = spawn(
     process.env.CHROME_BIN ||
@@ -306,13 +315,13 @@ try {
   await click('[aria-label="Sample project view"] button:first-child');
   await waitFor('document.body.textContent.includes("Reply as designer")');
   await previewButton("Reset preview");
-  await viewport(1440, 1440);
+  await viewport(marketplace ? 1920 : 1440, marketplace ? 1080 : 1440);
   console.log(
     "Homepage initial client/designer thread, hover/focus tooltip, designer reply/resolve, client decisions and 320px role switch passed.",
   );
   await evaluate("window.scrollTo(0, 0)");
   await capture("01-landing");
-  await viewport(1600, 1320);
+  await viewport(marketplace ? 1920 : 1600, marketplace ? 1080 : 1320);
   await command("Page.navigate", { url: new URL("/demo", origin).href });
   await waitFor(
     "document.querySelectorAll('.demo-assets button').length === 3",
@@ -338,11 +347,17 @@ try {
   );
   await click(".demo-assets button:first-child");
   await click(".demo-thread-heading");
-  await viewport(390, 1120);
-  await evaluate(
-    "document.querySelector('.demo-review-layout').scrollIntoView({block: 'start'})",
-  );
-  await capture("05-mobile-feedback");
+  if (marketplace) {
+    await click(".demo-assets button:nth-child(3)");
+    await viewport(1920, 1080);
+    await evaluate("window.scrollTo(0, 0)");
+  } else {
+    await viewport(390, 1120);
+    await evaluate(
+      "document.querySelector('.demo-review-layout').scrollIntoView({block: 'start'})",
+    );
+  }
+  await capture(marketplace ? "05-designer-workspace" : "05-mobile-feedback");
   if (captureError) throw captureError;
   if (interceptedSessions !== 1)
     throw new Error("Expected exactly one intercepted demo start.");
@@ -351,7 +366,7 @@ try {
     "02-pinned-feedback",
     "03-version-comparison",
     "04-client-review",
-    "05-mobile-feedback",
+    marketplace ? "05-designer-workspace" : "05-mobile-feedback",
   ];
   await writeFile(
     join(output, "capture.json"),
@@ -360,7 +375,8 @@ try {
         capturedAt: new Date().toISOString(),
         source: "Local production UI with intercepted seeded demo responses",
         backendWrites: false,
-        images: files.map((file) => `${file}.webp`),
+        images: files.map((file) => `${file}.${extension}`),
+        ...(marketplace ? { width: 1920, height: 1080 } : {}),
       },
       null,
       2,

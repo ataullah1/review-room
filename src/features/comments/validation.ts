@@ -24,6 +24,16 @@ export const createCommentSchema = z
     "Root comments need a position; replies belong to a thread.",
   );
 export const commentMutation = z.discriminatedUnion("operation", [
+  z.object({
+    operation: z.literal("address"),
+    sourceId: z.uuid(),
+    note: z
+      .string()
+      .trim()
+      .min(1)
+      .max(1000)
+      .refine((v) => !v.includes("\u0000")),
+  }),
   z.object({ operation: z.literal("create"), input: createCommentSchema }),
   z.object({
     operation: z.literal("resolve"),

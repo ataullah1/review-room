@@ -1,5 +1,7 @@
 import { config } from "dotenv";
 import pg from "pg";
+import { readFile, readdir } from "node:fs/promises";
+import { databaseConnectionOptions } from "../src/lib/config/database-connection";
 import {
   readDatabaseEnvironment,
   readStorageEnvironment,
@@ -29,7 +31,10 @@ async function checkDatabase(
   inspectPermissions = false,
 ) {
   const client = new pg.Client({
-    connectionString,
+    ...databaseConnectionOptions({
+      ...process.env,
+      DATABASE_URL: connectionString,
+    }),
     connectionTimeoutMillis: 15_000,
     query_timeout: 15_000,
   });
@@ -42,30 +47,20 @@ async function checkDatabase(
       SELECT tablename, rowsecurity FROM pg_tables
       WHERE schemaname = 'app' AND tablename <> '_prisma_migrations'
     `);
-    const expected = [
-      "UserProfile",
-      "Workspace",
-      "Membership",
-      "Project",
-      "ProjectMember",
-      "Asset",
-      "AssetVersion",
-      "Comment",
-      "ReviewDecision",
-      "ProjectInvitation",
-      "ShareLink",
-      "CapabilityRateBucket",
-      "ActivityEvent",
-      "ProjectActivityRead",
-      "DemoSession",
-    ];
+    const schema = await readFile(
+      new URL("../prisma/schema.prisma", import.meta.url),
+      "utf8",
+    );
+    const expected = [...schema.matchAll(/^model (\w+) \{/gm)].map(
+      (match) => match[1],
+    );
     requireCheck(
       expected.every((name) =>
         tables.rows.some(
           (table) => table.tablename === name && table.rowsecurity,
         ),
       ),
-      `${label}: expected application tables with RLS are missing.`,
+      `${label}: current application tables/RLS are missing; apply reviewed migrations before publishing.`,
     );
     const migrations = await client.query<{ pending: number }>(`
       SELECT COUNT(*)::int AS pending FROM app._prisma_migrations
@@ -75,7 +70,21 @@ async function checkDatabase(
       migrations.rows[0].pending === 0,
       `${label}: an unfinished migration exists.`,
     );
-    console.log(`${label}: connected; foundation tables and RLS verified.`);
+    const required = (
+      await readdir(new URL("../prisma/migrations/", import.meta.url))
+    ).filter((name) => /^\d{14}_/.test(name));
+    const applied = await client.query<{ migration_name: string }>(
+      `SELECT migration_name FROM app._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`,
+    );
+    requireCheck(
+      required.every((name) =>
+        applied.rows.some((row) => row.migration_name === name),
+      ),
+      `${label}: source migrations are pending; coordinate reviewed migration and code release.`,
+    );
+    console.log(
+      `${label}: connected; current migrations, application tables and RLS verified.`,
+    );
     if (inspectPermissions) {
       const grants = await client.query<{
         role: string;
@@ -182,11 +191,11 @@ async function main() {
   );
   const auth = await authResponse.json();
   requireCheck(
-    auth.external?.email === true && auth.mailer_autoconfirm === true,
-    "Immediate signup requires Confirm email OFF: Authentication > Sign In / Providers > Email > Confirm email.",
+    auth.external?.email === true && auth.mailer_autoconfirm === false,
+    "Verification-aware release requires Email enabled and Confirm email ON: Authentication > Sign In / Providers > Email. Configure SMTP before acceptance.",
   );
   console.log(
-    "Publishable key: valid; email sign-in enabled and confirmation disabled.",
+    "Publishable key: valid; email sign-in enabled and confirmation required. Actual SMTP delivery remains a controlled inbox check.",
   );
 
   const apiResponse = await request(

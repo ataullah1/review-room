@@ -6,7 +6,7 @@ Image feedback, revisions and client decisions in one workspace.
 
 ![Review Room project overview](docs/screenshots/Review-Room.webp)
 
-Review Room is an independent portfolio project for reviewing creative work. A comment belongs to a detail in an image, and a decision belongs to a particular version. That keeps “could you change this?” attached to the work it refers to.
+Review Room is a self-hosted source product for reviewing creative work. A comment belongs to a detail in an image, and a decision belongs to a particular version. That keeps “could you change this?” attached to the work it refers to.
 
 ## What you can do
 
@@ -15,7 +15,7 @@ Review Room is an independent portfolio project for reviewing creative work. A c
 - Upload JPG, PNG or WebP images to private storage. New versions preserve earlier files, feedback and decisions.
 - Pin a comment, reply in a thread, and resolve or reopen the discussion.
 - Compare versions and record each assigned client's approval or change request. A revision needs a fresh review.
-- Invite someone by email-bound link, or share one version through an expiring, revocable read-only link. The owner copies and sends links; the app does not send invitation emails.
+- Invite someone by email-bound link, or share one version through an expiring, revocable read-only link. Copy/send links manually, or configure the optional application email transport.
 - Follow project activity with a separate unread position for each person.
 
 The public demo has three fictional design concepts and two versions each. Visitors get separate 24-hour guest sessions, can switch between Designer and Client views, and can reset their sample feedback. Demo sessions cannot upload files, send invitations or access real workspaces.
@@ -58,6 +58,8 @@ Private requests verify the user on the server, check project access and run dat
 See [architecture and tradeoffs](docs/ARCHITECTURE.md) for request flows, the permission model and the reasons behind version-bound feedback.
 
 ## Run locally
+
+For a complete clean-machine installation and both supported Vercel deployment methods, start with [HowToSetup.md](HowToSetup.md). Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 Use Node.js 22.18+ and pnpm 11.21.0. PostgreSQL 18 tools are needed for the optional local database/test cluster.
 
@@ -124,9 +126,16 @@ tests/                  Unit and local PostgreSQL integration tests
 
 Vercel builds the connected GitHub branch with `pnpm build`. Build generates the ignored Prisma Client explicitly, including when install dependencies are cached; migrations are a separate operator action. Production database TLS requires the configured Supabase CA certificate.
 
+- [Buyer setup](HowToSetup.md) · [Marketplace handoff and remaining gates](docs/MARKETPLACE.md) · [Changelog](CHANGELOG.md)
 - [Release setup, Auth URLs, backups and rollback](docs/RELEASE.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Design decisions](docs/DECISIONS.md)
 - [Screenshot gallery and reproduction](docs/screenshots/README.md)
 - [Original brand assets](public/brand/README.md) · [Font licenses](public/fonts/README.md)
 
 Screenshots use the real local UI with intercepted seeded demo responses, not customer work or production fixtures. Run `pnpm portfolio:capture` against a local production server to regenerate them. No customer, revenue or load-performance claims are made.
+
+### Optional revision and delivery features
+
+Review pages include an immutable previous-feedback checklist: owners/designers can explain fixes in a newer version without moving old pins or counting the note as client approval. Owners can soft-remove a design with an impact preview and restore it within 30 days; original bytes/history remain retained and storage usage stays counted. Completed deliveries preserve their approved originals. Permanent purge is unavailable.
+
+Delivery ZIP generation is opt-in (`DELIVERY_ZIP_ENABLED=false` by default): up to 20 originals / 100 MiB, also subject to the private bucket upload limit. It requires a separate private ZIP bucket, hosted workload validation and the current additive migrations. Individual downloads remain the fallback. See [release setup and limitations](docs/RELEASE.md#optional-features-selected--7-november-2026).

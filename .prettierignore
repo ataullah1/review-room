@@ -5,3 +5,4 @@ src/generated
 coverage
 pnpm-lock.yaml
 prisma/migrations
+.pnpm-store

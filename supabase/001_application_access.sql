@@ -1,4 +1,5 @@
--- Run ONLY against the separate development Supabase project after Prisma migrations.
+-- Run against your explicitly selected buyer/development Supabase project after migrations.
+-- Review production upgrades separately; this script does not select a target.
 -- Prisma owns app tables; this file owns browser-facing grants and RLS hardening.
 BEGIN;
 REVOKE ALL ON SCHEMA app FROM PUBLIC;
@@ -24,6 +25,6 @@ BEGIN
   END LOOP;
 END $$;
 COMMIT;
--- No browser policies are created. Server Prisma runs as the app table owner,
--- so it must enforce authorization in Step 2 before serving any private records.
+-- No browser policies are created. Authenticated server operations use the
+-- transaction-scoped review_room_user role plus authorization and app RLS.
 -- Keep app out of Supabase Data API exposed schemas.

@@ -8,6 +8,8 @@ import { withUserDatabase } from "@/lib/data/context";
 import { getDb } from "@/lib/server/db";
 import {
   threadPage,
+  feedbackChecklist,
+  addressFeedback,
   replyPage,
   createComment,
   resolveComment,
@@ -55,6 +57,20 @@ export async function GET(request: Request, context: Context) {
       user = await requireUser(),
       query = new URL(request.url).searchParams,
       versionId = z.uuid().parse(query.get("versionId"));
+    if (query.get("checklist") === "1") {
+      const data = await withUserDatabase(getDb(), user.id, (tx) =>
+        feedbackChecklist(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          versionId,
+          boundedInteger(query.get("after")),
+        ),
+      );
+      return NextResponse.json(data, { headers });
+    }
     const rootId = query.get("rootId");
     const data = await withUserDatabase<
       | Awaited<ReturnType<typeof replyPage>>
@@ -120,6 +136,28 @@ export async function POST(request: Request, context: Context) {
       throw new AccessError("Invalid comment request.", 400);
     }
     const input = commentMutation.parse(json);
+    if (input.operation === "address") {
+      const claim = await withUserDatabase(getDb(), user.id, async (tx) => {
+        const id = await addressFeedback(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          versionId,
+          input,
+        );
+        const row = await tx.feedbackAddress.findUniqueOrThrow({
+          where: { id },
+        });
+        return {
+          note: row.note,
+          actorName: row.actorName,
+          createdAt: row.createdAt.toISOString(),
+        };
+      });
+      return NextResponse.json({ claim }, { headers });
+    }
     const comment = await withUserDatabase(getDb(), user.id, (tx) =>
       input.operation === "create"
         ? createComment(

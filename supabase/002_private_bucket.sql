@@ -1,4 +1,5 @@
--- Supabase development project ONLY. Do not run on plain local PostgreSQL.
+-- Inspect and run against the explicitly selected buyer/development Supabase project.
+-- Do not run on plain local PostgreSQL or overwrite an unrelated bucket.
 -- Supabase owns storage tables; Prisma never migrates them.
 BEGIN;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -21,5 +22,5 @@ BEGIN
 END $$;
 COMMIT;
 -- Intentionally no anon/authenticated storage.objects access policies.
--- In Step 4 authorized server code issues narrowly scoped signed capabilities.
+-- Authorized server code issues narrowly scoped signed capabilities.
 -- Bucket MIME limits are early filtering, not authoritative byte validation.

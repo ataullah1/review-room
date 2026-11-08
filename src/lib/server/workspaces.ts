@@ -1,3 +1,4 @@
+import { removalDetails } from "../data/asset-removal";
 import "server-only";
 import { requireUser } from "@/lib/auth/user";
 import { withUserDatabase } from "@/lib/data/context";
@@ -94,6 +95,11 @@ export async function getProject(
       project,
       member,
       assetDirectory: { ...assetDirectory, assets },
+      removedAssets:
+        member.role === "OWNER"
+          ? (await removalDetails(tx, user.id, workspaceId, projectId))
+              ?.removed || []
+          : [],
       people:
         member.role === "OWNER"
           ? await assignableMembers(tx, user.id, workspaceId)

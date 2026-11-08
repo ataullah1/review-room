@@ -15,3 +15,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Preserve restrictive demo RLS, structural/credential protections and durable quotas. Verify both application authorization and direct restricted-role reads/writes with the guarded local PostgreSQL tests.
 - Only intentionally public demo emails/passwords may reach login cards. Private Auth/admin keys, DB URLs and signing secrets must stay server-side.
 - Report local fixture/browser checks separately from real hosted Auth/Storage acceptance. Keep builds, provisioning, deployment and operator restore as separate actions.
+
+## Buyer codebase guide
+
+- Read `HowToSetup.md` for clean installation, supported hosting, Auth configuration and guarded checks. One Next.js App Router application provides UI/server routes; no separate backend process.
+- `src/lib/data/` owns transactional domain operations. Every authenticated request uses verified identity, explicit authorization and `withUserDatabase`'s transaction-local `review_room_user` role. Never replace it with owner/BYPASSRLS reads for customer routes.
+- `src/features/` contains focused UI/services; `src/lib/auth/` contains cookies, verification/recovery and durable quotas; `src/lib/storage/` issues narrow private capabilities. `prisma/migrations/` is the schema authority; add migrations rather than rewriting released history.
+- Current source: 26 migrations / 30 RLS application tables. Optional ZIP is OFF until hosted measurement. Soft removal retains original bytes/approved evidence; no permanent purge worker exists.
+- `pnpm build` generates Prisma and builds only. Migrations, demo provisioning, live mail, deployment and marketplace submission are separate operator actions. Never use local fixtures/reset against hosted customer data.
+- `pnpm release:package` creates an ignored, secret-screened source ZIP from current files; it does not commit/push or deploy. Keep licenses and `.env.example`; exclude actual environments, keys, private backups, generated clients and caches.

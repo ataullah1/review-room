@@ -1,3 +1,4 @@
+import { RemovedAssets } from "@/features/projects/asset-removal";
 import { CompletionControls } from "@/features/projects/completion-controls";
 import Link from "next/link";
 import { ActivityPanel } from "@/features/activity/activity-panel";
@@ -103,6 +104,15 @@ export default async function ProjectPage({
         !project.completionId &&
         (member.role === "OWNER" || member.role === "DESIGNER") && (
           <UploadPanel workspaceId={workspaceId} projectId={projectId} />
+        )}
+      {member.role === "OWNER" &&
+        !project.archivedAt &&
+        !project.completionId && (
+          <RemovedAssets
+            workspaceId={workspaceId}
+            projectId={projectId}
+            assets={result.removedAssets}
+          />
         )}
       <div className="asset-section-heading">
         <h2>Project images</h2>

@@ -30,3 +30,7 @@ minimumReleaseAgeExclude:
   - eslint-config-next@16.4.2
   - prisma@7.10.1
   - vitest@5.0.5
+
+# Security patch for ajv via Prisma development tooling; no runtime API change.
+overrides:
+  fast-uri: 3.1.9

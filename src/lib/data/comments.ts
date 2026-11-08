@@ -237,3 +237,138 @@ export async function resolveComment(
     }),
   );
 }
+
+export async function feedbackChecklist(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  assetId: string,
+  versionId: string,
+  after = 0,
+) {
+  const { version } = await reviewVersion(
+    tx,
+    userId,
+    workspaceId,
+    projectId,
+    assetId,
+    versionId,
+  );
+  const rows = await tx.comment.findMany({
+    where: {
+      parentId: null,
+      version: {
+        assetId,
+        projectId,
+        workspaceId,
+        status: "READY",
+        versionNumber: { lt: version.versionNumber },
+      },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    skip: after,
+    take: 21,
+    include: {
+      version: { select: { versionNumber: true } },
+      addressedIn: { where: { targetVersionId: versionId }, take: 1 },
+    },
+  });
+  return {
+    next: rows.length > 20 ? after + 20 : null,
+    items: rows.slice(0, 20).map((row) => ({
+      id: row.id,
+      body: row.body,
+      authorName: row.authorName,
+      versionId: row.versionId,
+      versionNumber: row.version.versionNumber,
+      threadNumber: row.threadNumber,
+      claim: row.addressedIn[0]
+        ? {
+            note: row.addressedIn[0].note,
+            actorName: row.addressedIn[0].actorName,
+            createdAt: row.addressedIn[0].createdAt.toISOString(),
+          }
+        : null,
+    })),
+  };
+}
+export async function addressFeedback(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  assetId: string,
+  versionId: string,
+  input: unknown,
+) {
+  const data = z
+    .object({
+      sourceId: z.uuid(),
+      note: z
+        .string()
+        .trim()
+        .min(1)
+        .max(1000)
+        .refine((v) => !v.includes("\u0000")),
+    })
+    .parse(input);
+  const { member, version } = await writable(
+    tx,
+    userId,
+    workspaceId,
+    projectId,
+    assetId,
+    versionId,
+  );
+  if (member.role === "CLIENT")
+    throw new AccessError(
+      "Only the owner or an assigned designer can address feedback.",
+    );
+  const source = await tx.comment.findFirst({
+    where: {
+      id: data.sourceId,
+      parentId: null,
+      version: {
+        assetId,
+        projectId,
+        workspaceId,
+        status: "READY",
+        versionNumber: {
+          lt: version.versionNumber,
+        },
+      },
+    },
+  });
+  if (!source)
+    throw new AccessError("Choose a historical thread from this design.", 404);
+  const existing = await tx.feedbackAddress.findUnique({
+    where: {
+      sourceId_targetVersionId: {
+        sourceId: data.sourceId,
+        targetVersionId: versionId,
+      },
+    },
+  });
+  if (existing) {
+    if (existing.actorId !== userId || existing.note !== data.note)
+      throw new AccessError(
+        "This feedback already has an immutable revision note.",
+        409,
+      );
+    return existing.id;
+  }
+  return (
+    await tx.feedbackAddress.create({
+      data: {
+        ...data,
+        targetVersionId: versionId,
+        actorId: userId,
+        actorName: "",
+      },
+    })
+  ).id;
+}
+export type FeedbackChecklistPage = Awaited<
+  ReturnType<typeof feedbackChecklist>
+>;

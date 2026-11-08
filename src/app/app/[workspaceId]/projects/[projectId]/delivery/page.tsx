@@ -1,3 +1,5 @@
+import { PackagePanel } from "@/features/delivery/package-panel";
+import { packagesEnabled } from "@/features/delivery/storage";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/user";
@@ -66,6 +68,12 @@ export default async function DeliveryPage({
               Download JSON manifest
             </a>
           </div>
+          <PackagePanel
+            key={snapshot.id}
+            base={base}
+            completionId={snapshot.id}
+            enabled={packagesEnabled()}
+          />
           <ol>
             {snapshot.manifest.files.map((file) => (
               <li key={file.versionId}>

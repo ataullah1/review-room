@@ -30,6 +30,7 @@ model UserProfile {
   reviewerDemoAccount ReviewerDemoAccount?
   ownedWorkspace      Workspace?            @relation("WorkspaceCreator")
   requiredReviews     ReviewRoundReviewer[]
+  feedbackClaims      FeedbackAddress[]
 
   @@schema("app")
 }
@@ -126,6 +127,7 @@ enum AssetVersionStatus {
 }
 
 model Asset {
+  removals         AssetRemoval[]
   id               String         @id @default(uuid()) @db.Uuid
   projectId        String         @db.Uuid
   workspaceId      String         @db.Uuid
@@ -144,41 +146,42 @@ model Asset {
 }
 
 model AssetVersion {
-  id               String             @id @default(uuid()) @db.Uuid
-  assetId          String             @db.Uuid
-  projectId        String             @db.Uuid
-  workspaceId      String             @db.Uuid
-  versionNumber    Int                @default(1)
-  status           AssetVersionStatus @default(PENDING)
-  creatorName      String             @default("") @db.VarChar(100)
-  creatorId        String             @db.Uuid
-  originalName     String             @db.VarChar(255)
-  expectedMimeType String             @db.VarChar(30)
-  expectedSize     Int
-  mimeType         String?            @db.VarChar(30)
-  fileSize         Int?
-  width            Int?
-  height           Int?
-  contentHash      String?            @db.Char(64)
-  stagingKey       String             @unique
-  objectKey        String             @unique
-  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
-  expiresAt        DateTime           @db.Timestamptz(3)
-  cleanupAfter     DateTime           @db.Timestamptz(3)
-  cleanupToken     String?            @db.Uuid
-  cleanupUntil     DateTime?          @db.Timestamptz(3)
-  cleanupRetryAt   DateTime?          @db.Timestamptz(3)
-  cleanedAt        DateTime?          @db.Timestamptz(3)
-  processingToken  String?            @db.Uuid
-  processingUntil  DateTime?          @db.Timestamptz(3)
-  failureReason    String?            @db.VarChar(200)
-  asset            Asset              @relation("AssetVersions", fields: [assetId, projectId, workspaceId], references: [id, projectId, workspaceId], onDelete: Cascade)
-  currentFor       Asset?             @relation("CurrentVersion")
-  comments         Comment[]
-  reviewDecisions  ReviewDecision[]
-  shares           ShareLink[]
-  creator          UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
-  reviewRounds     ReviewRound[]
+  id                String             @id @default(uuid()) @db.Uuid
+  assetId           String             @db.Uuid
+  projectId         String             @db.Uuid
+  workspaceId       String             @db.Uuid
+  versionNumber     Int                @default(1)
+  status            AssetVersionStatus @default(PENDING)
+  creatorName       String             @default("") @db.VarChar(100)
+  creatorId         String             @db.Uuid
+  originalName      String             @db.VarChar(255)
+  expectedMimeType  String             @db.VarChar(30)
+  expectedSize      Int
+  mimeType          String?            @db.VarChar(30)
+  fileSize          Int?
+  width             Int?
+  height            Int?
+  contentHash       String?            @db.Char(64)
+  stagingKey        String             @unique
+  objectKey         String             @unique
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  expiresAt         DateTime           @db.Timestamptz(3)
+  cleanupAfter      DateTime           @db.Timestamptz(3)
+  cleanupToken      String?            @db.Uuid
+  cleanupUntil      DateTime?          @db.Timestamptz(3)
+  cleanupRetryAt    DateTime?          @db.Timestamptz(3)
+  cleanedAt         DateTime?          @db.Timestamptz(3)
+  processingToken   String?            @db.Uuid
+  processingUntil   DateTime?          @db.Timestamptz(3)
+  failureReason     String?            @db.VarChar(200)
+  asset             Asset              @relation("AssetVersions", fields: [assetId, projectId, workspaceId], references: [id, projectId, workspaceId], onDelete: Cascade)
+  currentFor        Asset?             @relation("CurrentVersion")
+  comments          Comment[]
+  reviewDecisions   ReviewDecision[]
+  shares            ShareLink[]
+  creator           UserProfile        @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  reviewRounds      ReviewRound[]
+  addressedFeedback FeedbackAddress[]
 
   @@unique([id, assetId])
   @@unique([assetId, versionNumber])
@@ -188,21 +191,22 @@ model AssetVersion {
 }
 
 model Comment {
-  id           String       @id @db.Uuid
-  versionId    String       @db.Uuid
-  authorId     String       @db.Uuid
-  authorName   String       @default("") @db.VarChar(100)
-  parentId     String?      @db.Uuid
-  body         String       @db.VarChar(2000)
-  xRatio       Float?       @db.DoublePrecision
-  yRatio       Float?       @db.DoublePrecision
+  id           String            @id @db.Uuid
+  versionId    String            @db.Uuid
+  authorId     String            @db.Uuid
+  authorName   String            @default("") @db.VarChar(100)
+  parentId     String?           @db.Uuid
+  body         String            @db.VarChar(2000)
+  xRatio       Float?            @db.DoublePrecision
+  yRatio       Float?            @db.DoublePrecision
   threadNumber Int?
-  resolvedAt   DateTime?    @db.Timestamptz(3)
-  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
-  version      AssetVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  author       UserProfile  @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  parent       Comment?     @relation("CommentReplies", fields: [parentId, versionId], references: [id, versionId], onDelete: Cascade, onUpdate: NoAction)
-  replies      Comment[]    @relation("CommentReplies")
+  resolvedAt   DateTime?         @db.Timestamptz(3)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  version      AssetVersion      @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  author       UserProfile       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parent       Comment?          @relation("CommentReplies", fields: [parentId, versionId], references: [id, versionId], onDelete: Cascade, onUpdate: NoAction)
+  replies      Comment[]         @relation("CommentReplies")
+  addressedIn  FeedbackAddress[]
 
   @@unique([id, versionId])
   @@unique([versionId, threadNumber])
@@ -467,5 +471,60 @@ model NotificationPreference {
   userId       String  @id @db.Uuid
   emailEnabled Boolean @default(true)
 
+  @@schema("app")
+}
+
+model FeedbackAddress {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceId        String       @db.Uuid
+  targetVersionId String       @db.Uuid
+  actorId         String       @db.Uuid
+  actorName       String       @db.VarChar(100)
+  note            String       @db.VarChar(1000)
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  source          Comment      @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  target          AssetVersion @relation(fields: [targetVersionId], references: [id], onDelete: Restrict)
+  actor           UserProfile  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceId, targetVersionId])
+  @@index([targetVersionId, createdAt, id])
+  @@schema("app")
+}
+
+model AssetRemoval {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId      String    @db.Uuid
+  actorId      String    @db.Uuid
+  actorName    String    @db.VarChar(100)
+  reason       String    @db.VarChar(500)
+  removedAt    DateTime  @default(now()) @db.Timestamptz(3)
+  restoreUntil DateTime  @db.Timestamptz(3)
+  restoredAt   DateTime? @db.Timestamptz(3)
+  restoredById String?   @db.Uuid
+  asset        Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@index([assetId, removedAt])
+  @@schema("app")
+}
+
+model DeliveryPackage {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String    @db.Uuid
+  projectId     String    @db.Uuid
+  completionId  String    @db.Uuid
+  requestedById String    @db.Uuid
+  status        String    @default("QUEUED") @db.VarChar(12)
+  attempts      Int       @default(0)
+  leaseToken    String?   @db.Uuid
+  leaseUntil    DateTime? @db.Timestamptz(3)
+  expiresAt     DateTime  @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @db.Timestamptz(3)
+  cleanedAt     DateTime? @db.Timestamptz(3)
+  artifactBytes Int?
+  artifactHash  String?   @db.Char(64)
+
+  @@unique([completionId, requestedById])
+  @@index([status, expiresAt])
   @@schema("app")
 }

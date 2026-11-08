@@ -1,3 +1,4 @@
+import { maintainPackages } from "@/features/delivery/worker";
 import { dispatchMail } from "@/features/notifications/dispatch";
 import { getDb } from "@/lib/server/db";
 import { getUploadStorage } from "@/lib/server/uploads";
@@ -23,7 +24,8 @@ export async function GET(request: Request) {
       await db.emailVerificationProof.deleteMany({
         where: { expiresAt: { lt: new Date() } },
       });
-      return { demo, uploads, notifications };
+      const packages = await maintainPackages(db, false);
+      return { demo, uploads, notifications, packages };
     },
     log: (event) => console.info(JSON.stringify(event)),
   });

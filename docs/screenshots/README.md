@@ -18,3 +18,7 @@ pnpm exec next start -p 3001
 ```
 
 In another terminal run `pnpm portfolio:capture`. It accepts an optional loopback HTTP origin, requires Chrome (default macOS path; override with `CHROME_BIN`), and overwrites only these named assets and `capture.json`. The script blocks external resources and backend requests, allowing only public page/assets and intercepted demo responses. It creates and removes its own temporary browser profile and does not stop your app server. No browser is needed during normal deployment.
+
+## Marketplace export
+
+`pnpm marketplace:capture` reuses this capture runner with a 1920 × 1080 viewport and PNG output at `.local/release/media/`. It preserves the existing portfolio images. The fifth marketplace frame is a desktop Designer workspace instead of the narrow mobile frame so all five uploads match the required dimensions. `capture.json` records the fictional local-render provenance. See `docs/MARKETPLACE.md` for captions and release gates; these screenshots are not evidence of real hosted customer workflows.

@@ -1,4 +1,5 @@
 "use server";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireUser } from "@/lib/auth/user";
@@ -13,6 +14,7 @@ import {
   removeProjectMember,
   setProjectArchived,
 } from "@/lib/data/projects";
+import { changeAssetRemoval } from "@/lib/data/asset-removal";
 import { getDb } from "@/lib/server/db";
 export type ProjectActionState = {
   error?: string;
@@ -23,7 +25,14 @@ export async function mutateProject(
   workspaceId: string,
   projectId: string | null,
   operation:
-    "create" | "members" | "remove-member" | "details" | "archive" | "restore",
+    | "create"
+    | "members"
+    | "remove-member"
+    | "details"
+    | "archive"
+    | "restore"
+    | "asset-remove"
+    | "asset-restore",
   _previous: ProjectActionState,
   form: FormData,
 ): Promise<ProjectActionState> {
@@ -39,6 +48,16 @@ export async function mutateProject(
           memberIds: form.getAll("memberIds"),
         });
       if (!projectId) throw new AccessError();
+      if (operation === "asset-remove" || operation === "asset-restore") {
+        if (operation === "asset-remove" && form.get("confirm") !== "yes")
+          throw new AccessError("Confirm the removal impact first.", 400);
+        await changeAssetRemoval(tx, user.id, workspaceId, projectId, {
+          assetId: form.get("assetId"),
+          restoring: operation === "asset-restore",
+          reason: String(form.get("reason") || ""),
+        });
+        return { id: projectId };
+      }
       if (operation === "details") {
         await updateProjectDetails(tx, user.id, workspaceId, projectId, {
           name: form.get("name"),
@@ -72,18 +91,22 @@ export async function mutateProject(
       return { id: projectId };
     });
     revalidatePath(`/app/${workspaceId}/projects`);
-    revalidatePath(`/app/${workspaceId}/projects/${result.id}`);
+    revalidatePath(`/app/${workspaceId}/projects/${result.id}`, "layout");
     return {
       success:
-        operation === "members"
-          ? "Project people updated."
-          : operation === "remove-member"
-            ? "Member removed from this project. Workspace membership and other project assignments remain."
-            : operation === "archive"
-              ? "Project archived. Its history and people are preserved."
-              : operation === "restore"
-                ? "Project restored."
-                : "Project created.",
+        operation === "asset-remove"
+          ? "Design removed. Original bytes and history are retained; restore within 30 days."
+          : operation === "asset-restore"
+            ? "Design restored. Previously revoked share links stay revoked."
+            : operation === "members"
+              ? "Project people updated."
+              : operation === "remove-member"
+                ? "Member removed from this project. Workspace membership and other project assignments remain."
+                : operation === "archive"
+                  ? "Project archived. Its history and people are preserved."
+                  : operation === "restore"
+                    ? "Project restored."
+                    : "Project created.",
       projectId: result.id,
     };
   } catch (error) {
@@ -94,4 +117,22 @@ export async function mutateProject(
       fallback: "Could not save your changes. Please refresh and try again.",
     });
   }
+}
+
+export async function removeDesignAction(
+  workspaceId: string,
+  projectId: string,
+  previous: ProjectActionState,
+  form: FormData,
+): Promise<ProjectActionState> {
+  const result = await mutateProject(
+    workspaceId,
+    projectId,
+    "asset-remove",
+    previous,
+    form,
+  );
+  // Redirect outside mutateProject's failure handler so NEXT_REDIRECT is never swallowed.
+  if (result.success) redirect(`/app/${workspaceId}/projects/${projectId}`);
+  return result;
 }

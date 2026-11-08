@@ -16,7 +16,8 @@ if (
   throw new Error(
     "Use an HTTPS origin or a loopback HTTP origin without credentials.",
   );
-const expected = "https://rreviewroom.vercel.app";
+const expected = new URL(process.env.RELEASE_EXPECTED_ORIGIN || base.origin)
+  .origin;
 let failures = 0;
 async function check(name, path, verify) {
   try {

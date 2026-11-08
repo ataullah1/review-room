@@ -133,7 +133,10 @@ async function main() {
         );
         if (![403, 404].includes(hidden.status))
           throw new Error("Unassigned project data was not denied.");
-        if (account.role === "DESIGNER") {
+        if (
+          account.role === "DESIGNER" &&
+          !process.argv.includes("--read-only")
+        ) {
           const denied = await request(`${base}/decisions`, cookie, "POST", {
             id: randomUUID(),
             expectedCurrentVersionId: versionId,

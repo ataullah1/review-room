@@ -322,6 +322,8 @@ All new paths/model names below are **proposed**, not existing repository featur
 
 ### Later enhancements — selected separately after the first release
 
+**Selection update — 7 November 2026:** the owner selected RR-014, RR-019 and the soft-removal checkpoint of RR-021. Agreed defaults: ZIP up to 20 originals / 100 MiB with 24-hour private artifact expiry, disabled until hosted measurement; removal restores within 30 days, retains approved originals and does not enable permanent purge. See the latest implementation ledger for actual evidence and remaining acceptance.
+
 #### RR-014 — Previous-feedback checklist (later enhancement)
 
 - **Type / priority / effort:** New feature / P2 / M. **Dependencies/config:** RR-011, RR-015; not a blocker for first release.

@@ -1,3 +1,7 @@
+import { AssetRemovalForm } from "@/features/projects/asset-removal";
+import { removalDetails } from "@/lib/data/asset-removal";
+import { FeedbackChecklist } from "@/features/comments/checklist";
+import { feedbackChecklist } from "@/lib/data/comments";
 import { ReviewRoundPanel } from "@/features/reviews/review-round-panel";
 import {
   reviewRoundStatus,
@@ -42,6 +46,18 @@ export default async function ReviewPage({
       return {
         ...data,
         userId: user.id,
+        removal:
+          data.member.role === "OWNER"
+            ? await removalDetails(tx, user.id, workspaceId, projectId, assetId)
+            : null,
+        checklist: await feedbackChecklist(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          data.version.id,
+        ),
         round: await reviewRoundStatus(tx, data.version.id),
         roundHistory: await reviewRoundHistory(
           tx,
@@ -198,6 +214,18 @@ export default async function ReviewPage({
           disabled={!!project.archivedAt || !!project.completionId}
         />
       )}
+      <FeedbackChecklist
+        key={version.id}
+        base={base}
+        versionId={version.id}
+        initial={result.checklist}
+        canAddress={
+          member.role !== "CLIENT" &&
+          !project.archivedAt &&
+          !project.completionId &&
+          asset.currentVersionId === version.id
+        }
+      />
       <ReviewRoundPanel
         base={base}
         versionId={version.id}
@@ -207,7 +235,6 @@ export default async function ReviewPage({
         canRequest={
           member.role !== "CLIENT" &&
           !project.archivedAt &&
-          !project.completionId &&
           !project.completionId &&
           asset.currentVersionId === version.id
         }
@@ -222,6 +249,16 @@ export default async function ReviewPage({
         archived={!!project.archivedAt}
         initial={decisions}
       />
+      {result.removal?.impact &&
+        !project.archivedAt &&
+        !project.completionId && (
+          <AssetRemovalForm
+            workspaceId={workspaceId}
+            projectId={projectId}
+            assetId={assetId}
+            impact={result.removal.impact}
+          />
+        )}
       {member.role !== "CLIENT" &&
         !project.archivedAt &&
         !project.completionId && (
