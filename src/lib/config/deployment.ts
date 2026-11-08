@@ -115,11 +115,6 @@ export function assertHostedProjectConsistency(env: Environment = process.env) {
       "Deployed DATABASE_URL does not match the configured Supabase project. Verify database and Auth settings.",
     );
   }
-  if (env.DIRECT_URL && !databaseBelongsToProject(env.DIRECT_URL, authRef)) {
-    throw new Error(
-      "Deployed DIRECT_URL does not match the configured Supabase project. Verify database and Auth settings.",
-    );
-  }
 }
 
 export function assertPreviewIsolation(env: Environment = process.env) {

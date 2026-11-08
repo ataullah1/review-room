@@ -167,6 +167,18 @@ describe("deployment isolation", () => {
       }),
     ).not.toThrow();
 
+    // DIRECT_URL belongs to migration operators and is never opened by the
+    // deployed runtime. A stale optional operator value must not take down
+    // otherwise correctly isolated customer requests.
+    expect(() =>
+      assertHostedProjectConsistency({
+        VERCEL_ENV: "production",
+        NEXT_PUBLIC_SUPABASE_URL: `https://${ref}.supabase.co`,
+        DATABASE_URL: `postgresql://postgres.${ref}:pass@aws-0.pooler.supabase.com:6543/postgres`,
+        DIRECT_URL: `postgresql://postgres.${otherRef}:pass@aws-0.pooler.supabase.com:5432/postgres`,
+      }),
+    ).not.toThrow();
+
     // Local development does not reject mixed local DB + hosted Auth
     expect(() =>
       assertHostedProjectConsistency({
