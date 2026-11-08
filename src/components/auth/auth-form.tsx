@@ -1,6 +1,6 @@
 "use client";
 import { Brand } from "@/components/brand";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,27 @@ export function AuthForm({
   initialSuccess?: string;
   demoAccounts?: PublicDemoAccount[];
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState(initialError);
   const [success, setSuccess] = useState(initialSuccess);
   const [pending, setPending] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState("");
+  const [filledDemoRole, setFilledDemoRole] = useState("");
   const signup = mode === "signup";
+  function fillDemoCredentials(account: PublicDemoAccount) {
+    const form = formRef.current;
+    if (!form) return;
+    (form.elements.namedItem("email") as HTMLInputElement).value =
+      account.email;
+    (form.elements.namedItem("password") as HTMLInputElement).value =
+      account.password;
+    setError("");
+    setSuccess("");
+    setFilledDemoRole(account.role);
+    (form.querySelector('button[type="submit"]') as HTMLButtonElement)?.focus();
+  }
   async function authenticate(credentials: {
     email: FormDataEntryValue | string | null;
     password: FormDataEntryValue | string | null;
@@ -229,7 +243,7 @@ export function AuthForm({
           <div className="auth-divider">
             <span>or continue with email</span>
           </div>
-          <form onSubmit={submit} aria-busy={pending}>
+          <form ref={formRef} onSubmit={submit} aria-busy={pending}>
             {signup && (
               <label>
                 Your name
@@ -321,6 +335,41 @@ export function AuthForm({
               <ArrowRight size={16} />
             </Button>
           </form>
+          {!signup && demoAccounts.length === 3 && (
+            <div className="auth-quick-demo">
+              <span>Fill demo credentials</span>
+              <div role="group" aria-label="Fill demo account credentials">
+                {demoAccounts.map((account) => {
+                  const label =
+                    account.role === "OWNER"
+                      ? "Creator"
+                      : account.role === "DESIGNER"
+                        ? "Designer"
+                        : "Client";
+                  return (
+                    <button
+                      type="button"
+                      key={account.role}
+                      disabled={pending}
+                      aria-pressed={filledDemoRole === account.role}
+                      onClick={() => fillDemoCredentials(account)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span
+                className="auth-quick-demo-status"
+                role="status"
+                aria-live="polite"
+              >
+                {filledDemoRole
+                  ? `${filledDemoRole === "OWNER" ? "Creator" : filledDemoRole === "DESIGNER" ? "Designer" : "Client"} demo credentials filled. Select Log in to continue.`
+                  : ""}
+              </span>
+            </div>
+          )}
           <p className="auth-switch">
             {signup ? "Already have an account?" : "New to Review Room?"}{" "}
             <Link
