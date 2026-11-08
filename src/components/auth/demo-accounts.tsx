@@ -38,12 +38,13 @@ export function DemoAccounts({
   disabled,
 }: {
   accounts: PublicDemoAccount[];
-  onSelect: (account: PublicDemoAccount) => void;
+  onSelect: (account: PublicDemoAccount) => Promise<string | void>;
   disabled: boolean;
 }) {
   const [visible, setVisible] = useState<string[]>([]);
   const [copied, setCopied] = useState("");
   const [status, setStatus] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
   async function copy(account: PublicDemoAccount, field: "email" | "password") {
     try {
       await navigator.clipboard.writeText(account[field]);
@@ -122,14 +123,19 @@ export function DemoAccounts({
                   className={styles.tryButton}
                   type="button"
                   disabled={disabled}
-                  onClick={() => {
-                    onSelect(account);
-                    setStatus(
-                      `${persona.name} credentials filled in. Select Log in to continue.`,
-                    );
+                  onClick={async () => {
+                    setSelectedRole(account.role);
+                    setStatus(`Signing in as ${persona.name}…`);
+                    const message = await onSelect(account);
+                    if (message) {
+                      setSelectedRole("");
+                      setStatus(message);
+                    }
                   }}
                 >
-                  Try as {persona.name}
+                  {disabled && selectedRole === account.role
+                    ? "Signing in…"
+                    : `Try as ${persona.name}`}
                   <ArrowRight size={15} aria-hidden="true" />
                 </button>
               </article>

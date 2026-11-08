@@ -1,6 +1,6 @@
 "use client";
 import { Brand } from "@/components/brand";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ export function AuthForm({
   initialSuccess?: string;
   demoAccounts?: PublicDemoAccount[];
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState(initialError);
   const [success, setSuccess] = useState(initialSuccess);
   const [pending, setPending] = useState(false);
@@ -28,9 +27,11 @@ export function AuthForm({
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState("");
   const signup = mode === "signup";
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  async function authenticate(credentials: {
+    email: FormDataEntryValue | string | null;
+    password: FormDataEntryValue | string | null;
+    displayName?: FormDataEntryValue | null;
+  }) {
     setPending(true);
     setError("");
     setSuccess("");
@@ -39,28 +40,40 @@ export function AuthForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: form.get("email"),
-          password: form.get("password"),
-          ...(signup ? { displayName: form.get("displayName") } : {}),
+          email: credentials.email,
+          password: credentials.password,
+          ...(signup ? { displayName: credentials.displayName } : {}),
           next,
         }),
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || "Please try again.");
+        const message = data.error || "Please try again.";
+        setError(message);
         setPending(false);
-        return;
+        return message as string;
       }
       if (data.pendingVerification) {
-        setPendingEmail(data.email || String(form.get("email")));
+        setPendingEmail(data.email || String(credentials.email));
         setPending(false);
         return;
       }
       window.location.assign(data.redirectTo);
     } catch {
-      setError("Could not connect. Please try again.");
+      const message = "Could not connect. Please try again.";
+      setError(message);
       setPending(false);
+      return message;
     }
+  }
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await authenticate({
+      email: form.get("email"),
+      password: form.get("password"),
+      displayName: form.get("displayName"),
+    });
   }
   async function resendEmail() {
     if (!pendingEmail || resending) return;
@@ -216,7 +229,7 @@ export function AuthForm({
           <div className="auth-divider">
             <span>or continue with email</span>
           </div>
-          <form ref={formRef} onSubmit={submit} aria-busy={pending}>
+          <form onSubmit={submit} aria-busy={pending}>
             {signup && (
               <label>
                 Your name
@@ -330,25 +343,9 @@ export function AuthForm({
         <DemoAccounts
           accounts={demoAccounts}
           disabled={pending}
-          onSelect={(account) => {
-            const form = formRef.current;
-            if (!form) return;
-            (form.elements.namedItem("email") as HTMLInputElement).value =
-              account.email;
-            (form.elements.namedItem("password") as HTMLInputElement).value =
-              account.password;
-            setError("");
-            form.scrollIntoView({
-              block: "center",
-              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-                .matches
-                ? "auto"
-                : "smooth",
-            });
-            (
-              form.querySelector('button[type="submit"]') as HTMLButtonElement
-            )?.focus({ preventScroll: true });
-          }}
+          onSelect={(account) =>
+            authenticate({ email: account.email, password: account.password })
+          }
         />
       )}
     </div>

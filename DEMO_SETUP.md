@@ -8,7 +8,7 @@ Review Room uses three real, manually created Supabase Auth accounts on the exis
 | Designer Demo | DESIGNER       | demo@designer.com | 0123456789      |
 | Client Demo   | CLIENT         | demo@client.com   | 0123456789      |
 
-Only these intentionally public credentials appear on `/login`. Try fills the existing login form; the user submits normal authentication. Private admin keys and database credentials stay server-side.
+Only these intentionally public credentials appear on `/login`. **Try as Creator**, **Try as Designer** and **Try as Client** submit the same normal Supabase password-authentication route used by the login form and then open `/app`; they do not bypass authentication. Private admin keys and database credentials stay server-side.
 
 Login opens `/app`, the existing workspace chooser. Select **Olive Café — Demo Studio**, then a project. Existing empty personal workspaces are retained for compatibility with older deployed login code, but hidden from demo users in the new chooser.
 
