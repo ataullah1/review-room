@@ -6,11 +6,9 @@ type Status = Awaited<ReturnType<typeof packageStatus>>;
 export function PackagePanel({
   base,
   completionId,
-  enabled,
 }: {
   base: string;
   completionId: string;
-  enabled: boolean;
 }) {
   const [job, setJob] = useState<Status>(null),
     [pending, setPending] = useState(false),
@@ -49,22 +47,14 @@ export function PackagePanel({
         individual downloads remain available. Downloads already issued may
         remain valid for 60 seconds.
       </p>
-      {!enabled && (
-        <p>
-          ZIP preparation is currently unavailable. You can check an existing
-          package or download originals individually below.
-        </p>
-      )}
       <div className="upload-actions">
-        {enabled && (
-          <Button
-            type="button"
-            disabled={pending}
-            onClick={() => update("request")}
-          >
-            Prepare / retry ZIP
-          </Button>
-        )}
+        <Button
+          type="button"
+          disabled={pending}
+          onClick={() => update("request")}
+        >
+          Prepare / retry ZIP
+        </Button>
         <Button type="button" disabled={pending} onClick={() => update()}>
           Check ZIP status
         </Button>

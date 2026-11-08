@@ -79,7 +79,7 @@ pnpm exec prettier --write THIRD_PARTY_NOTICES.md
 pnpm release:package
 ```
 
-Packaging needs Python 3 locally, not in production. Output: `.local/release/review-room-0.1.0-source.zip` and `source-manifest.json` with per-file hashes/archive checksum. It captures **current uncommitted files**, excludes Git history, actual environments, `.local`, keys/certificates, generated Prisma/client/build output and dependencies. It refuses known local secret values, server-key signatures, private keys and symlinks. This is not a complete Git-history secret audit; prefer the clean archive over uploading the existing `.git` history without a separate review.
+Packaging needs Python 3 locally, not in production. For version 1.0.2 the output is `.local/vibe96/review-room-1.0.2/review-room-1.0.2-source.zip` and `source-manifest.json` with per-file hashes/archive checksum. It captures **current uncommitted files**, excludes Git history, actual environments, `.local`, keys/certificates, generated Prisma/client/build output and dependencies. It refuses known local secret values, server-key signatures, private keys and symlinks. This is not a complete Git-history secret audit; prefer the clean archive over uploading the existing `.git` history without a separate review.
 
 The separate media directory is not embedded in the source ZIP; upload its five PNGs to the listing media fields. No commit/push, deployment, provisioning or marketplace upload is done by the packaging command. Regenerate after source changes so archive, live demo and submitted version match.
 

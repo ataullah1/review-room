@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { parse } from "dotenv";
 const root = await realpath(process.cwd()),
   pkg = JSON.parse(await readFile("package.json", "utf8"));
-const output = resolve(".local/release");
+const output = resolve(`.local/vibe96/review-room-${pkg.version}`);
 await mkdir(output, { recursive: true, mode: 0o700 });
 const roots = [
   "src",
@@ -174,5 +174,5 @@ await writeFile(
   { mode: 0o600 },
 );
 console.log(
-  `Prepared ${filename}: ${manifest.length} files, ${(bytes.length / 1024 / 1024).toFixed(2)} MiB. ZIP integrity and secret exclusion checks passed. Output: .local/release/`,
+  `Prepared ${filename}: ${manifest.length} files, ${(bytes.length / 1024 / 1024).toFixed(2)} MiB. ZIP integrity and secret exclusion checks passed. Output: .local/vibe96/review-room-${pkg.version}/`,
 );

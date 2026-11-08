@@ -68,12 +68,13 @@ export default async function DeliveryPage({
               Download JSON manifest
             </a>
           </div>
-          <PackagePanel
-            key={snapshot.id}
-            base={base}
-            completionId={snapshot.id}
-            enabled={packagesEnabled()}
-          />
+          {packagesEnabled() && (
+            <PackagePanel
+              key={snapshot.id}
+              base={base}
+              completionId={snapshot.id}
+            />
+          )}
           <ol>
             {snapshot.manifest.files.map((file) => (
               <li key={file.versionId}>

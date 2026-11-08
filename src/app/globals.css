@@ -1740,6 +1740,112 @@ h1 > span {
   color: var(--muted);
   margin: 12px 0;
 }
+.route-not-found {
+  width: min(100% - 40px, 660px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 64px 0;
+}
+.route-not-found > .eyebrow {
+  margin-top: 64px;
+}
+.route-not-found h1 {
+  margin-top: 18px;
+  font-size: clamp(40px, 8vw, 72px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+.route-not-found > p {
+  max-width: 480px;
+  margin-top: 20px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.route-not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+.route-loading > h1 {
+  margin-top: 18px;
+}
+.route-loading-grid,
+.route-loading-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 30px;
+}
+.route-loading-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.route-loading-grid > span,
+.route-loading-list > span,
+.route-loading-canvas > span {
+  display: block;
+  border: 1px solid #e1e6dc;
+  background: linear-gradient(100deg, #f2f4ef 25%, #fafbf8 45%, #f2f4ef 65%);
+  background-size: 200% 100%;
+  animation: route-loading-shimmer 1.6s ease-in-out infinite;
+}
+.route-loading-grid > span {
+  min-height: 190px;
+  border-radius: 10px;
+}
+.route-loading-list > span {
+  min-height: 86px;
+  border-radius: 8px;
+}
+.route-loading-canvas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  min-height: min(650px, 68dvh);
+  margin-top: 28px;
+}
+.route-loading-canvas > span {
+  border-radius: 10px;
+}
+@keyframes route-loading-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (max-width: 700px) {
+  .route-not-found {
+    padding: 40px 0;
+  }
+  .route-not-found > .eyebrow {
+    margin-top: 44px;
+  }
+  .route-loading-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .route-loading-grid > span:nth-child(n + 2) {
+    display: none;
+  }
+  .route-loading-canvas {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 55dvh;
+  }
+  .route-loading-canvas > span:last-child {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-grid > span,
+  .route-loading-list > span,
+  .route-loading-canvas > span {
+    animation: none;
+  }
+}
 .prototype-auth-link {
   position: fixed;
   bottom: 16px;

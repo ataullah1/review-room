@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — marketplace preparation (7 November 2026)
+## 1.0.2 — marketplace release candidate (8 November 2026)
 
 This is the source's release-candidate record, not a claim that the live demo has already been upgraded.
 
@@ -13,5 +13,6 @@ This is the source's release-candidate record, not a claim that the live demo ha
 - Opt-in bounded private ZIP jobs, cancellation, expiry and artifact cleanup; disabled pending hosted measurement.
 - Author-only current-version comment/reply editing and tombstone deletion with private audit history; historical and completed feedback remains immutable.
 - Buyer setup, reusable source packaging, marketplace media export and third-party notices.
+- Branded route fallbacks, context-aware project/review/delivery loading states, and a clean delivery UI that hides the optional ZIP workflow while it is disabled.
 
 Known release gates: matching live schema/code, hosted three-role acceptance, SMTP/controlled inbox setup, full isolated recovery rehearsal, marketplace review and seller submission. Permanent purge is not available. Source migrations: 28; application tables: 31 with RLS. No production migration, deployment or marketplace submission is implied by this changelog.
