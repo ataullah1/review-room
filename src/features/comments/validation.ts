@@ -1,5 +1,5 @@
 import { z } from "zod";
-const body = z
+export const commentBody = z
   .string()
   .trim()
   .min(1, "Write a comment first.")
@@ -11,7 +11,7 @@ const body = z
 export const createCommentSchema = z
   .object({
     id: z.uuid(),
-    body,
+    body: commentBody,
     parentId: z.uuid().nullable().default(null),
     xRatio: z.number().finite().min(0).max(1).nullable().default(null),
     yRatio: z.number().finite().min(0).max(1).nullable().default(null),
@@ -40,6 +40,12 @@ export const commentMutation = z.discriminatedUnion("operation", [
     id: z.uuid(),
     resolved: z.boolean(),
   }),
+  z.object({
+    operation: z.literal("edit"),
+    id: z.uuid(),
+    body: commentBody,
+  }),
+  z.object({ operation: z.literal("delete"), id: z.uuid() }),
 ]);
 export function boundedInteger(value: string | null, fallback = 0) {
   const n = Number(value);

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { imagePoint, isPinClick } from "../src/features/comments/coordinates";
-import { createCommentSchema } from "../src/features/comments/validation";
+import {
+  commentMutation,
+  createCommentSchema,
+} from "../src/features/comments/validation";
 const id = "10000000-0000-4000-8000-000000000001";
 describe("image content coordinates", () => {
   it("places all four corners and centre against the actual content rectangle", () => {
@@ -54,6 +57,17 @@ describe("image content coordinates", () => {
   });
 });
 describe("immutable comment payload", () => {
+  it("accepts bounded audited edit and delete requests", () => {
+    expect(
+      commentMutation.parse({ operation: "edit", id, body: " Updated " }),
+    ).toMatchObject({ operation: "edit", body: "Updated" });
+    expect(commentMutation.safeParse({ operation: "delete", id }).success).toBe(
+      true,
+    );
+    expect(
+      commentMutation.safeParse({ operation: "edit", id, body: " " }).success,
+    ).toBe(false);
+  });
   it("trims plain text and drops forged author, version and resolved state", () => {
     expect(
       createCommentSchema.parse({

@@ -2807,6 +2807,58 @@ h1 > span {
   margin-top: 13px;
   color: #576351;
 }
+.review-comment-body small {
+  color: #8b9585;
+  font-size: 10px;
+}
+.review-comment-body.is-deleted {
+  color: #8b9585;
+  font-style: italic;
+}
+.review-comment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 7px;
+}
+.review-comment-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #77836f;
+  font-size: 10px;
+}
+.review-comment-actions button:hover:not(:disabled) {
+  color: #41543a;
+}
+.review-comment-edit {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.review-comment-edit textarea {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  border: 1px solid #cfdac7;
+  border-radius: 7px;
+  padding: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.6;
+}
+.review-comment-edit > div {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+.review-comment-edit > div > button {
+  min-height: 32px;
+  padding: 7px 10px;
+  font-size: 10px;
+}
 .review-replies {
   margin-top: 16px;
   padding-left: 12px;

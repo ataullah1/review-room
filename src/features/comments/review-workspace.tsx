@@ -18,6 +18,8 @@ import {
   X,
   Send,
   MapPin,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { imagePoint, isPinClick, type ImagePoint } from "./coordinates";
@@ -36,6 +38,7 @@ export function ReviewWorkspace({
   width,
   height,
   initial,
+  currentUserId,
   canResolve,
   readOnly,
   feedbackUrl,
@@ -48,6 +51,7 @@ export function ReviewWorkspace({
   width: number;
   height: number;
   initial: ThreadPage;
+  currentUserId?: string;
   canResolve: boolean;
   readOnly: boolean;
   feedbackUrl?: string;
@@ -66,7 +70,9 @@ export function ReviewWorkspace({
     [drawer, setDrawer] = useState(false),
     [pending, setPending] = useState(false),
     [error, setError] = useState(""),
-    [reply, setReply] = useState({ id: "", body: "" });
+    [reply, setReply] = useState({ id: "", body: "" }),
+    [editing, setEditing] = useState<{ id: string; body: string } | null>(null),
+    [deleteConfirm, setDeleteConfirm] = useState("");
   const feedback = useRef<HTMLElement>(null),
     feedbackTrigger = useRef<HTMLElement | null>(null),
     viewport = useRef<HTMLDivElement>(null),
@@ -363,6 +369,46 @@ export function ReviewWorkspace({
         error instanceof Error
           ? error.message
           : "Could not update this thread.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+  function replaceComment(comment: CommentView) {
+    setThreads((rows) =>
+      rows.map((root) =>
+        root.id === comment.id
+          ? { ...root, ...comment }
+          : {
+              ...root,
+              replies: root.replies.map((item) =>
+                item.id === comment.id ? comment : item,
+              ),
+            },
+      ),
+    );
+  }
+  async function changeComment(
+    operation: "edit" | "delete",
+    comment: CommentView,
+  ) {
+    if (pending) return;
+    setPending(true);
+    setError("");
+    try {
+      const { comment: updated } = await request(endpoint, {
+        operation,
+        id: comment.id,
+        ...(operation === "edit" ? { body: editing?.body } : {}),
+      });
+      replaceComment(updated);
+      setEditing(null);
+      setDeleteConfirm("");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : `Could not ${operation} this comment.`,
       );
     } finally {
       setPending(false);
@@ -746,14 +792,194 @@ export function ReviewWorkspace({
                   </small>
                 </span>
               </button>
-              <p className="review-comment-body">{root.body}</p>
+              {editing?.id === root.id ? (
+                <form
+                  className="review-comment-edit"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void changeComment("edit", root);
+                  }}
+                >
+                  <textarea
+                    value={editing.body}
+                    onChange={(event) =>
+                      setEditing({ id: root.id, body: event.target.value })
+                    }
+                    required
+                    maxLength={2000}
+                    rows={3}
+                    disabled={pending}
+                    aria-label={`Edit comment ${root.threadNumber}`}
+                  />
+                  <div>
+                    <button type="button" onClick={() => setEditing(null)}>
+                      Cancel
+                    </button>
+                    <Button
+                      type="submit"
+                      disabled={pending || !editing.body.trim()}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <p
+                  className={`review-comment-body${root.deletedAt ? " is-deleted" : ""}`}
+                >
+                  {root.body}
+                  {root.editedAt && !root.deletedAt && (
+                    <small aria-label="Edited"> · edited</small>
+                  )}
+                </p>
+              )}
+              {currentUserId === root.authorId &&
+                !readOnly &&
+                !root.deletedAt &&
+                editing?.id !== root.id && (
+                  <div className="review-comment-actions">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        setEditing({ id: root.id, body: root.body });
+                        setDeleteConfirm("");
+                      }}
+                    >
+                      <Pencil size={12} /> Edit
+                    </button>
+                    {deleteConfirm === root.id ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => void changeComment("delete", root)}
+                        >
+                          Delete comment
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setDeleteConfirm("")}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          setDeleteConfirm(root.id);
+                          setEditing(null);
+                        }}
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    )}
+                  </div>
+                )}
               {selected === root.id && (
                 <>
                   <div className="review-replies">
                     {root.replies.map((item) => (
                       <div className="review-reply" key={item.id}>
                         <strong>{item.authorName}</strong>
-                        <p className="review-comment-body">{item.body}</p>
+                        {editing?.id === item.id ? (
+                          <form
+                            className="review-comment-edit"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              void changeComment("edit", item);
+                            }}
+                          >
+                            <textarea
+                              value={editing.body}
+                              onChange={(event) =>
+                                setEditing({
+                                  id: item.id,
+                                  body: event.target.value,
+                                })
+                              }
+                              required
+                              maxLength={2000}
+                              rows={3}
+                              disabled={pending}
+                              aria-label="Edit reply"
+                            />
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => setEditing(null)}
+                              >
+                                Cancel
+                              </button>
+                              <Button
+                                type="submit"
+                                disabled={pending || !editing.body.trim()}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </form>
+                        ) : (
+                          <p
+                            className={`review-comment-body${item.deletedAt ? " is-deleted" : ""}`}
+                          >
+                            {item.body}
+                            {item.editedAt && !item.deletedAt && (
+                              <small aria-label="Edited"> · edited</small>
+                            )}
+                          </p>
+                        )}
+                        {currentUserId === item.authorId &&
+                          !readOnly &&
+                          !item.deletedAt &&
+                          editing?.id !== item.id && (
+                            <div className="review-comment-actions">
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => {
+                                  setEditing({ id: item.id, body: item.body });
+                                  setDeleteConfirm("");
+                                }}
+                              >
+                                <Pencil size={12} /> Edit
+                              </button>
+                              {deleteConfirm === item.id ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={pending}
+                                    onClick={() =>
+                                      void changeComment("delete", item)
+                                    }
+                                  >
+                                    Delete reply
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={pending}
+                                    onClick={() => setDeleteConfirm("")}
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={pending}
+                                  onClick={() => {
+                                    setDeleteConfirm(item.id);
+                                    setEditing(null);
+                                  }}
+                                >
+                                  <Trash2 size={12} /> Delete
+                                </button>
+                              )}
+                            </div>
+                          )}
                       </div>
                     ))}
                   </div>
@@ -766,7 +992,7 @@ export function ReviewWorkspace({
                       Load earlier replies
                     </button>
                   )}
-                  {!readOnly && (
+                  {!readOnly && !root.deletedAt && (
                     <form className="review-reply-form" onSubmit={saveReply}>
                       <label className="review-text-label">
                         Reply to thread {root.threadNumber}
@@ -794,7 +1020,7 @@ export function ReviewWorkspace({
                       </Button>
                     </form>
                   )}
-                  {canResolve && !readOnly && (
+                  {canResolve && !readOnly && !root.deletedAt && (
                     <button
                       className="review-resolve"
                       disabled={pending}

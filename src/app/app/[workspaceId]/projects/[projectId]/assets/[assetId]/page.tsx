@@ -197,6 +197,7 @@ export default async function ReviewPage({
           width={version.width!}
           height={version.height!}
           initial={initial}
+          currentUserId={userId}
           canResolve={member.role !== "CLIENT"}
           readOnly={
             !!project.archivedAt ||

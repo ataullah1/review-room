@@ -13,6 +13,8 @@ import {
   replyPage,
   createComment,
   resolveComment,
+  editComment,
+  deleteComment,
 } from "@/lib/data/comments";
 import {
   boundedInteger,
@@ -158,31 +160,52 @@ export async function POST(request: Request, context: Context) {
       });
       return NextResponse.json({ claim }, { headers });
     }
-    const comment = await withUserDatabase(getDb(), user.id, (tx) =>
-      input.operation === "create"
-        ? createComment(
-            tx,
-            user.id,
-            workspaceId,
-            projectId,
-            assetId,
-            versionId,
-            input.input,
-          )
-        : resolveComment(
-            tx,
-            user.id,
-            workspaceId,
-            projectId,
-            assetId,
-            versionId,
-            input.id,
-            input.resolved,
-          ),
-    );
+    const comment = await withUserDatabase(getDb(), user.id, (tx) => {
+      if (input.operation === "create")
+        return createComment(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          versionId,
+          input.input,
+        );
+      if (input.operation === "resolve")
+        return resolveComment(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          versionId,
+          input.id,
+          input.resolved,
+        );
+      if (input.operation === "edit")
+        return editComment(
+          tx,
+          user.id,
+          workspaceId,
+          projectId,
+          assetId,
+          versionId,
+          input.id,
+          input.body,
+        );
+      return deleteComment(
+        tx,
+        user.id,
+        workspaceId,
+        projectId,
+        assetId,
+        versionId,
+        input.id,
+      );
+    });
     after(() => dispatchMail(getDb(), undefined, 2).catch(() => undefined));
     return NextResponse.json({ comment }, { headers });
   } catch (error) {
-    return failure(error, "read");
+    return failure(error, "mutate");
   }
 }

@@ -198,7 +198,7 @@ Delivery provides approved originals through short-lived attachment URLs, a prin
 
 ## Optional features selected — 7 November 2026
 
-This section supersedes the earlier statement that all optional features are unselected. Source now has **26 migrations / 30 application tables**. Apply additive migrations 023–026 together with the compatible application release; builds still do not migrate. Older 015–022 remain prerequisites if not yet applied.
+This section supersedes the earlier statement that all optional features are unselected. Current source has **28 migrations / 31 application tables**; migrations 027–028 add audited comment editing/tombstones after the optional-workflow migrations. Apply additive migrations 023–028 together with the compatible application release; builds still do not migrate. Older 015–022 remain prerequisites if not yet applied.
 
 - **Revision checklist:** current-version owner/designer can record how an earlier same-design root thread was addressed. Saved notes are immutable claims, not resolution or approval. Original pins stay on their own versions. Public reviewer accounts cannot write these structural claims.
 - **Soft removal:** owner sees impact before confirmation; reopen completed projects first and finish/cancel pending uploads. Removing hides work and revokes its shares; restore within 30 days never reactivates old links. Retained completed deliveries keep their originals. Storage usage is not reduced. No permanent-purge endpoint/worker is enabled or supplied by this checkpoint.

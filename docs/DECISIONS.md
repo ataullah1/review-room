@@ -29,6 +29,7 @@ Historical versions are read only, including replies and resolve actions. Share 
 - Upload sessions, guest demo sessions and per-project/user read markers have separate persistence and permission rules.
 - Before member management ships, define owner transfer, last-owner protection, removal and immediate permission revocation. Already-issued signed URLs remain usable until expiry.
 - Demo requires session creation throttling, write caps, resource ceilings and scheduled scoped cleanup, beyond individual comment quotas.
+- Comment and reply authors may edit or tombstone their own text only on the current version of an active, incomplete project. Historical/completed feedback is immutable; deletes retain the thread as a tombstone and store the previous text in a private audit record.
 
 ## Routes
 
@@ -42,4 +43,4 @@ Historical versions are read only, including replies and resolve actions. Share 
 
 Implemented MVP: verified identity, assigned projects, private image upload, persistent normalized pins and threads, immutable versions, per-client decisions, invitations, expiring read-only shares, activity, isolated demo and deployment configuration.
 
-Later: video/PDF, AI summaries, billing, realtime presence, email delivery, visual diffs, custom domains and mobile applications.
+Later: video/PDF, AI summaries, billing, realtime presence, visual diffs, custom domains and mobile applications. Application email delivery is already available as an optional disabled-by-default transport.

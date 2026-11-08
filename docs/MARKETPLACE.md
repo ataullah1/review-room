@@ -40,7 +40,7 @@ The source includes a responsive public homepage, an isolated signup-free walkth
 | Auth / storage            | Supabase Auth + @supabase/ssr; private Supabase Storage                                                 |
 | Database                  | PostgreSQL, Prisma 7.10.1, pg adapter, versioned `app` schema                                           |
 | Roles                     | OWNER, DESIGNER, CLIENT; no separate platform-admin role                                                |
-| Source counts             | 16 `page.tsx` files, 26 route-handler files, 26 migrations, 30 application tables with RLS              |
+| Source counts             | 16 `page.tsx` files, 26 route-handler files, 28 migrations, 31 application tables with RLS              |
 | Runtime                   | Node 22.x (minimum 22.18), pnpm 11.21.0                                                                 |
 | Supported production host | Vercel; Git import and CLI deployment methods documented                                                |
 | Setup                     | `HowToSetup.md`; secrets stay out of the source archive                                                 |

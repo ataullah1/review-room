@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { assertLocalDatabase } from "../prisma/local-safety";
 config({ path: ".env", quiet: true });
 async function main() {
@@ -41,10 +42,18 @@ async function main() {
       const rows = await check.query(
         "SELECT tablename,rowsecurity FROM pg_tables WHERE schemaname='app' AND tablename<>'_prisma_migrations'",
       );
-      if (rows.rowCount !== 30 || rows.rows.some((row) => !row.rowsecurity))
+      const schema = await readFile(
+          new URL("../prisma/schema.prisma", import.meta.url),
+          "utf8",
+        ),
+        expectedTables = [...schema.matchAll(/^model \w+ \{/gm)].length;
+      if (
+        rows.rowCount !== expectedTables ||
+        rows.rows.some((row) => !row.rowsecurity)
+      )
         throw new Error("Rehearsal schema/RLS mismatch.");
       console.log(
-        "Empty local database: all migrations applied; 30 application tables have RLS. No seed or hosted writes.",
+        `Empty local database: all migrations applied; ${expectedTables} application tables have RLS. No seed or hosted writes.`,
       );
     } finally {
       await check.end();

@@ -11,6 +11,7 @@ This is the source's release-candidate record, not a claim that the live demo ha
 - Optional encrypted notification outbox with retries and recipient authorization; provider setup remains external.
 - Immutable previous-feedback revision notes; owner soft removal/30-day restore preserving approved originals.
 - Opt-in bounded private ZIP jobs, cancellation, expiry and artifact cleanup; disabled pending hosted measurement.
+- Author-only current-version comment/reply editing and tombstone deletion with private audit history; historical and completed feedback remains immutable.
 - Buyer setup, reusable source packaging, marketplace media export and third-party notices.
 
-Known release gates: matching live schema/code, hosted three-role acceptance, SMTP/controlled inbox setup, full isolated recovery rehearsal, marketplace review and seller submission. Permanent purge is not available. Source migrations: 26; application tables: 30 with RLS. No production migration, deployment or marketplace submission is implied by this changelog.
+Known release gates: matching live schema/code, hosted three-role acceptance, SMTP/controlled inbox setup, full isolated recovery rehearsal, marketplace review and seller submission. Permanent purge is not available. Source migrations: 28; application tables: 31 with RLS. No production migration, deployment or marketplace submission is implied by this changelog.

@@ -5,12 +5,15 @@ import type { UserDatabase } from "./context";
 import { AccessError } from "../auth/errors";
 import { requireProjectAccess } from "./permissions";
 import { createCommentSchema } from "../../features/comments/validation";
+import { commentBody } from "../../features/comments/validation";
 import type { CommentView, ThreadPage } from "../../features/comments/types";
 export function commentView(row: Comment): CommentView {
   return {
     ...row,
     createdAt: row.createdAt.toISOString(),
     resolvedAt: row.resolvedAt?.toISOString() || null,
+    editedAt: row.editedAt?.toISOString() || null,
+    deletedAt: row.deletedAt?.toISOString() || null,
   };
 }
 export async function reviewVersion(
@@ -173,7 +176,12 @@ export async function createComment(
   if (data.parentId) {
     if (
       !(await tx.comment.findFirst({
-        where: { id: data.parentId, versionId, parentId: null },
+        where: {
+          id: data.parentId,
+          versionId,
+          parentId: null,
+          deletedAt: null,
+        },
       }))
     )
       throw new AccessError(
@@ -226,7 +234,7 @@ export async function resolveComment(
   if (!z.uuid().safeParse(id).success)
     throw new AccessError("Thread not found.", 404);
   const root = await tx.comment.findFirst({
-    where: { id, versionId, parentId: null },
+    where: { id, versionId, parentId: null, deletedAt: null },
   });
   if (!root) throw new AccessError("Thread not found.", 404);
   if (!!root.resolvedAt === resolved) return commentView(root);
@@ -235,6 +243,75 @@ export async function resolveComment(
       where: { id: root.id },
       data: { resolvedAt: resolved ? new Date() : null },
     }),
+  );
+}
+
+async function auditedCommentMutation(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  assetId: string,
+  versionId: string,
+  id: string,
+  body: string | null,
+  deleting: boolean,
+) {
+  await writable(tx, userId, workspaceId, projectId, assetId, versionId);
+  if (!z.uuid().safeParse(id).success)
+    throw new AccessError("Comment not found.", 404);
+  const value = deleting ? null : commentBody.parse(body);
+  const rows = await tx.$queryRaw<{ id: string }[]>`
+    SELECT app.edit_comment(${id}::uuid,${value},${deleting}) AS id
+  `;
+  if (!rows[0]?.id) throw new AccessError("Comment not found.", 404);
+  return commentView(
+    await tx.comment.findUniqueOrThrow({ where: { id: rows[0].id } }),
+  );
+}
+
+export function editComment(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  assetId: string,
+  versionId: string,
+  id: string,
+  body: string,
+) {
+  return auditedCommentMutation(
+    tx,
+    userId,
+    workspaceId,
+    projectId,
+    assetId,
+    versionId,
+    id,
+    body,
+    false,
+  );
+}
+
+export function deleteComment(
+  tx: UserDatabase,
+  userId: string,
+  workspaceId: string,
+  projectId: string,
+  assetId: string,
+  versionId: string,
+  id: string,
+) {
+  return auditedCommentMutation(
+    tx,
+    userId,
+    workspaceId,
+    projectId,
+    assetId,
+    versionId,
+    id,
+    null,
+    true,
   );
 }
 
@@ -329,6 +406,7 @@ export async function addressFeedback(
     where: {
       id: data.sourceId,
       parentId: null,
+      deletedAt: null,
       version: {
         assetId,
         projectId,

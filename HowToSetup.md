@@ -49,7 +49,7 @@ pnpm db:validate
 pnpm db:deploy
 ```
 
-The current source contains **26 versioned migrations**, creating **30 application tables** under `app` with RLS. This command applies reviewed migrations; it does not create Auth users or a bucket. Never use `db push`, reset or the local seed against production. Prisma generation also runs during install/build.
+The current source contains **28 versioned migrations**, creating **31 application tables** under `app` with RLS. This command applies reviewed migrations; it does not create Auth users or a bucket. Never use `db push`, reset or the local seed against production. Prisma generation also runs during install/build.
 
 In that project's Supabase SQL Editor, inspect and execute `supabase/001_application_access.sql`, then `supabase/002_private_bucket.sql`. They revoke browser table access and create/verify the private `review-room-private` bucket with a 10 MiB limit and JPEG/PNG/WebP allowlist. Conflicting existing bucket settings fail for inspection; do not silently overwrite another app's bucket. Keep `app` out of the Data API exposed schemas and do not create public Storage read policies.
 

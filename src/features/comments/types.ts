@@ -9,6 +9,8 @@ export type CommentView = {
   yRatio: number | null;
   threadNumber: number | null;
   resolvedAt: string | null;
+  editedAt: string | null;
+  deletedAt: string | null;
   createdAt: string;
 };
 export type ThreadView = CommentView & {

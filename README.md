@@ -13,7 +13,7 @@ Review Room is a self-hosted source product for reviewing creative work. A comme
 - Sign in with email/password or Google, then work in your own workspace with a cookie-based session.
 - Create projects and assign designers or clients. Owners see all projects in their workspace; everyone else sees their assigned projects.
 - Upload JPG, PNG or WebP images to private storage. New versions preserve earlier files, feedback and decisions.
-- Pin a comment, reply in a thread, and resolve or reopen the discussion.
+- Pin a comment, reply in a thread, edit or tombstone your own current feedback, and resolve or reopen the discussion. Private audit history preserves accountability.
 - Compare versions and record each assigned client's approval or change request. A revision needs a fresh review.
 - Invite someone by email-bound link, or share one version through an expiring, revocable read-only link. Copy/send links manually, or configure the optional application email transport.
 - Follow project activity with a separate unread position for each person.

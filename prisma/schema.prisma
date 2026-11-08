@@ -25,6 +25,7 @@ model UserProfile {
   memberships         Membership[]
   assetVersions       AssetVersion[]
   comments            Comment[]
+  commentRevisions    CommentRevision[]
   reviewDecisions     ReviewDecision[]
   activityReads       ProjectActivityRead[]
   reviewerDemoAccount ReviewerDemoAccount?
@@ -201,16 +202,33 @@ model Comment {
   yRatio       Float?            @db.DoublePrecision
   threadNumber Int?
   resolvedAt   DateTime?         @db.Timestamptz(3)
+  editedAt     DateTime?         @db.Timestamptz(3)
+  deletedAt    DateTime?         @db.Timestamptz(3)
   createdAt    DateTime          @default(now()) @db.Timestamptz(3)
   version      AssetVersion      @relation(fields: [versionId], references: [id], onDelete: Cascade)
   author       UserProfile       @relation(fields: [authorId], references: [id], onDelete: Restrict)
   parent       Comment?          @relation("CommentReplies", fields: [parentId, versionId], references: [id, versionId], onDelete: Cascade, onUpdate: NoAction)
   replies      Comment[]         @relation("CommentReplies")
+  revisions    CommentRevision[]
   addressedIn  FeedbackAddress[]
 
   @@unique([id, versionId])
   @@unique([versionId, threadNumber])
   @@index([versionId, parentId, createdAt, id])
+  @@schema("app")
+}
+
+model CommentRevision {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commentId    String      @db.Uuid
+  editorId     String      @db.Uuid
+  previousBody String      @db.VarChar(2000)
+  action       String      @db.VarChar(10)
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+  comment      Comment     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  editor       UserProfile @relation(fields: [editorId], references: [id], onDelete: Restrict)
+
+  @@index([commentId, createdAt, id])
   @@schema("app")
 }
 

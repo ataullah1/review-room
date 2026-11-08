@@ -519,3 +519,10 @@ Phase gate impact: Storage usage accounting and configurable non-billing limits 
 - Restored ACL/RLS checks passed: anonymous reads denied, missing-identity project count zero and all three public reviewer personas matched their expected owner/assigned-project counts. The temporary database, plaintext original copies and only the newly created local NOLOGIN compatibility roles were removed afterward; existing local data/roles and production were preserved. Safe receipt: ignored `.local/release/local-restore-receipt.json`.
 - This proves local SQL/original-byte recovery, **not hosted Supabase Auth/provider/config restoration or Storage API acceptance**. `hostedSupabaseRestoreVerified` and `providerConfigRestoreVerified` remain false. No broad reset or production restore occurred.
 - Production migration/publication waits for the owner-prepared matching source commit; no commit/push/deploy or production database write performed. Take a fresh recovery point and recheck migration history at the actual rollout, rather than treating the 7 November backup as a current production snapshot.
+
+## Comment edit/delete follow-up — 8 November 2026
+
+- Added author-only editing and tombstone deletion for root feedback and replies on the current version of active, incomplete projects. Historical versions, completed/archived projects, other authors and direct body updates remain denied.
+- Previous text is stored in a private `CommentRevision` audit row. Deleted roots remain numbered, preserve replies and become resolved so they no longer block aggregate approval; deleted threads cannot receive new replies.
+- Added migrations 027–028. Current source has **28 migrations / 31 RLS-enabled application tables**. No production migration or deployment is implied.
+- Focused validation: eight comment unit tests and all **102 PostgreSQL integration tests in 13 files passed** on the guarded local database. Hosted browser acceptance remains separate.

@@ -15,6 +15,8 @@ import {
   threadPage,
   replyPage,
   reviewVersion,
+  editComment,
+  deleteComment,
 } from "../../src/lib/data/comments";
 const url = assertLocalDatabase(process.env.TEST_DATABASE_URL, "test");
 const db = new PrismaClient({
@@ -156,6 +158,89 @@ describe("version-bound feedback under server checks and RLS", () => {
         tx.comment.delete({ where: { id: saved.id } }),
       ),
     ).rejects.toThrow();
+  });
+  it("lets authors edit and tombstone current feedback with private history", async () => {
+    const saved = await create(ids.client, root("Original client feedback"));
+    const reply = await create(ids.designer, {
+      id: randomUUID(),
+      body: "Original designer reply",
+      parentId: saved.id,
+    });
+    const edited = await withUserDatabase(db, ids.client, (tx) =>
+      editComment(
+        tx,
+        ids.client,
+        ids.workspace,
+        projectId,
+        assetId,
+        versionId,
+        saved.id,
+        "Updated client feedback",
+      ),
+    );
+    expect(edited).toMatchObject({
+      body: "Updated client feedback",
+      deletedAt: null,
+    });
+    expect(edited.editedAt).toBeTruthy();
+    await expect(
+      withUserDatabase(db, ids.designer, (tx) =>
+        editComment(
+          tx,
+          ids.designer,
+          ids.workspace,
+          projectId,
+          assetId,
+          versionId,
+          saved.id,
+          "Not the author's text",
+        ),
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+
+    const deletedReply = await withUserDatabase(db, ids.designer, (tx) =>
+      deleteComment(
+        tx,
+        ids.designer,
+        ids.workspace,
+        projectId,
+        assetId,
+        versionId,
+        reply.id,
+      ),
+    );
+    expect(deletedReply).toMatchObject({ body: "Comment deleted." });
+    expect(deletedReply.deletedAt).toBeTruthy();
+    const deletedRoot = await withUserDatabase(db, ids.client, (tx) =>
+      deleteComment(
+        tx,
+        ids.client,
+        ids.workspace,
+        projectId,
+        assetId,
+        versionId,
+        saved.id,
+      ),
+    );
+    expect(deletedRoot.deletedAt).toBeTruthy();
+    expect(deletedRoot.resolvedAt).toBeTruthy();
+    await expect(
+      create(ids.designer, {
+        id: randomUUID(),
+        body: "Cannot reply to a deleted thread",
+        parentId: saved.id,
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+
+    const history = await db.commentRevision.findMany({
+      where: { commentId: { in: [saved.id, reply.id] } },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(history.map((row) => [row.action, row.previousBody])).toEqual([
+      ["EDIT", "Original client feedback"],
+      ["DELETE", "Original designer reply"],
+      ["DELETE", "Updated client feedback"],
+    ]);
   });
   it("rejects cross-version, nested reply parents, forged asset/version and out-of-range raw coordinates", async () => {
     const saved = await create(ids.client, root());
